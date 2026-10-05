@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — My account</title>
+  <script src="auth-guard.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="account">
+  <a href="#main" class="skip-link" data-testid="skip-link">Skip to content</a>
+  <div id="app-header"></div>
+
+  <main id="main" class="container">
+    <section class="account-hero" data-testid="account-hero">
+      <div class="row">
+        <span class="avatar avatar-lg" id="account-avatar" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow" style="margin:0">My account</p>
+          <h1 id="account-greeting" data-testid="account-greeting" style="margin:0"></h1>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><strong id="stat-orders" data-testid="account-stat-orders">0</strong><span>Orders</span></div>
+        <div class="stat"><strong id="stat-spent" data-testid="account-stat-spent">$0</strong><span>Total spent</span></div>
+        <div class="stat"><strong id="stat-wishlist" data-testid="account-stat-wishlist">0</strong><span>Wishlist</span></div>
+        <div class="stat"><strong id="stat-returns" data-testid="account-stat-returns">0</strong><span>Open returns</span></div>
+      </div>
+    </section>
+
+    <div class="account-layout">
+      <nav class="side-tabs" role="tablist" aria-label="Account sections" aria-orientation="vertical" data-testid="account-tabs">
+        <button type="button" role="tab" id="tab-orders" data-tab="orders" aria-controls="panel-orders" data-testid="account-tab-orders">📦 Orders</button>
+        <button type="button" role="tab" id="tab-wishlist" data-tab="wishlist" aria-controls="panel-wishlist" data-testid="account-tab-wishlist">♡ Wishlist</button>
+        <button type="button" role="tab" id="tab-returns" data-tab="returns" aria-controls="panel-returns" data-testid="account-tab-returns">↩︎ Returns</button>
+        <button type="button" role="tab" id="tab-profile" data-tab="profile" aria-controls="panel-profile" data-testid="account-tab-profile">👤 Profile</button>
+      </nav>
+
+      <div>
+        <!-- ============ Orders ============ -->
+        <section class="panel" role="tabpanel" id="panel-orders" aria-labelledby="tab-orders" data-testid="account-panel-orders">
+          <div class="panel-title"><h2>Order history</h2></div>
+          <div id="orders-table"></div>
+        </section>
+
+        <!-- ============ Wishlist ============ -->
+        <section class="panel" role="tabpanel" id="panel-wishlist" aria-labelledby="tab-wishlist" data-testid="account-panel-wishlist" hidden>
+          <div class="panel-title">
+            <h2>Wishlist</h2>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-sm btn-primary" id="wishlist-add-all" data-testid="wishlist-add-all-btn">Add all to cart</button>
+          </div>
+          <p class="small muted">Drag items <span aria-hidden="true">⠿</span> to set your priority, or drag one onto the bag to add it to your cart.</p>
+          <div class="wishlist-board">
+            <ul class="wishlist-list" id="wishlist-list" data-testid="wishlist-list" aria-label="Wishlist items"></ul>
+            <div class="cart-dropzone" id="wishlist-cart-dropzone" data-testid="wishlist-cart-dropzone" aria-label="Drop here to add to cart">
+              <span class="dz-bag" aria-hidden="true">🛍️</span>
+              <strong>Drop here to add to cart</strong>
+              <span class="small muted" id="wishlist-dropzone-text" data-testid="wishlist-dropzone-text">Uses the default option and colour</span>
+            </div>
+          </div>
+          <div class="empty-state" id="wishlist-empty" data-testid="wishlist-empty" hidden>
+            <span class="emoji" aria-hidden="true">♡</span>
+            <p style="margin:0">Your wishlist is empty. Tap the heart on any product to save it.</p>
+            <a href="index.html#catalog" class="btn btn-primary btn-sm" data-testid="wishlist-browse">Browse products</a>
+          </div>
+          <p class="small" style="margin-top:1rem">Priority order: <span class="mono" id="wishlist-order" data-testid="wishlist-order">empty</span></p>
+        </section>
+
+        <!-- ============ Returns ============ -->
+        <section class="panel" role="tabpanel" id="panel-returns" aria-labelledby="tab-returns" data-testid="account-panel-returns" hidden>
+          <div class="panel-title"><h2>Returns</h2></div>
+
+          <div class="alert alert-info" id="returns-none" data-testid="returns-no-eligible" hidden>
+            You have no delivered orders that can be returned yet. Orders become returnable once they are marked as delivered.
+          </div>
+
+          <form id="return-form" data-testid="return-form" novalidate aria-label="Request a return">
+            <div class="form-grid">
+              <div class="field span-2">
+                <label for="return-order" class="required">Order</label>
+                <select class="select" id="return-order" data-testid="return-order-select" aria-describedby="return-order-error">
+                  <option value="">— Select a delivered order —</option>
+                </select>
+                <p class="field-error" id="return-order-error" data-testid="return-order-error"></p>
+              </div>
+              <fieldset class="field span-2 plain-fieldset" id="return-items" data-testid="return-items" aria-describedby="return-items-error">
+                <legend class="field-label required">Items to return</legend>
+                <div class="return-items-list" id="return-items-list"><p class="small muted">Select an order first.</p></div>
+                <p class="field-error" id="return-items-error" data-testid="return-items-error"></p>
+              </fieldset>
+              <div class="field">
+                <label for="return-reason" class="required">Reason</label>
+                <select class="select" id="return-reason" data-testid="return-reason-select" aria-describedby="return-reason-error">
+                  <option value="">— Choose a reason —</option>
+                  <option value="damaged">Arrived damaged</option>
+                  <option value="wrong-item">Wrong item received</option>
+                  <option value="size">Doesn’t fit</option>
+                  <option value="changed-mind">Changed my mind</option>
+                  <option value="other">Other</option>
+                </select>
+                <p class="field-error" id="return-reason-error" data-testid="return-reason-error"></p>
+              </div>
+              <fieldset class="field plain-fieldset" data-testid="return-refund-methods">
+                <legend class="field-label">Refund to</legend>
+                <label class="check"><input type="radio" name="refund" value="original" checked data-testid="return-refund-original"> Original payment method</label>
+                <label class="check"><input type="radio" name="refund" value="credit" data-testid="return-refund-credit"> Store credit (+10% bonus)</label>
+              </fieldset>
+              <div class="field span-2">
+                <label for="return-details">Details <span class="muted small" id="return-details-hint">(optional)</span></label>
+                <textarea class="textarea" id="return-details" maxlength="300" data-testid="return-details-input" aria-describedby="return-details-error"></textarea>
+                <p class="field-error" id="return-details-error" data-testid="return-details-error"></p>
+              </div>
+              <div class="field span-2">
+                <span class="field-label">Photos <span class="muted small" id="return-photos-hint">(required if the item arrived damaged, up to 3)</span></span>
+                <div id="return-uploader"></div>
+                <p class="field-error" id="return-photos-error" data-testid="return-photos-error"></p>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="return-submit" data-testid="return-submit-btn" style="margin-top:1rem">Request return</button>
+          </form>
+
+          <div class="alert alert-success" id="return-success" data-testid="return-success" role="status" hidden style="margin-top:1rem"></div>
+
+          <h3 style="margin-top:2rem">Your return requests</h3>
+          <ul class="returns-list" id="returns-list" data-testid="returns-list"></ul>
+        </section>
+
+        <!-- ============ Profile ============ -->
+        <section class="panel" role="tabpanel" id="panel-profile" aria-labelledby="tab-profile" data-testid="account-panel-profile" hidden>
+          <div class="panel-title"><h2>Profile</h2></div>
+          <form id="profile-form" data-testid="profile-form" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label for="profile-name" class="required">Full name</label>
+                <input type="text" class="input" id="profile-name" data-testid="profile-name-input" aria-describedby="profile-name-error">
+                <p class="field-error" id="profile-name-error" data-testid="profile-name-error"></p>
+              </div>
+              <div class="field">
+                <label for="profile-email" class="required">Email</label>
+                <input type="email" class="input" id="profile-email" data-testid="profile-email-input" aria-describedby="profile-email-error">
+                <p class="field-error" id="profile-email-error" data-testid="profile-email-error"></p>
+              </div>
+              <div class="field">
+                <label for="profile-phone">Phone</label>
+                <input type="tel" class="input" id="profile-phone" placeholder="(555) 123-4567" data-testid="profile-phone-input">
+              </div>
+              <div class="field">
+                <label for="profile-dob">Date of birth</label>
+                <input type="date" class="input" id="profile-dob" data-testid="profile-dob-input">
+              </div>
+              <div class="field">
+                <label for="profile-interests">Interests <span class="muted small">(Ctrl/⌘-click for several)</span></label>
+                <select class="select" id="profile-interests" multiple data-testid="profile-interests-select">
+                  <option value="electronics">Electronics</option>
+                  <option value="fashion">Fashion</option>
+                  <option value="home">Home &amp; Kitchen</option>
+                  <option value="sports">Sports &amp; Outdoors</option>
+                  <option value="books">Books</option>
+                  <option value="beauty">Beauty</option>
+                </select>
+              </div>
+              <fieldset class="field plain-fieldset" data-testid="profile-contact-pref">
+                <legend class="field-label">Preferred contact</legend>
+                <label class="check"><input type="radio" name="contact" value="email" data-testid="profile-contact-email"> Email</label>
+                <label class="check"><input type="radio" name="contact" value="sms" data-testid="profile-contact-sms"> SMS</label>
+                <label class="check"><input type="radio" name="contact" value="none" data-testid="profile-contact-none"> Don’t contact me</label>
+              </fieldset>
+              <label class="switch-row span-2" for="profile-newsletter">
+                <span><strong>Newsletter</strong><br><span class="small muted">Weekly deals and new arrivals.</span></span>
+                <input type="checkbox" class="switch" role="switch" id="profile-newsletter" data-testid="profile-newsletter-switch">
+              </label>
+            </div>
+            <div class="row" style="margin-top:1rem">
+              <button type="submit" class="btn btn-primary" id="profile-save" data-testid="profile-save-btn">Save changes</button>
+              <span class="small muted" id="profile-saved" data-testid="profile-saved-text" role="status"></span>
+            </div>
+          </form>
+
+          <div class="danger-zone" data-testid="profile-danger-zone">
+            <div>
+              <strong>Delete my shopping data</strong>
+              <p class="small muted" style="margin:0">Removes your orders, cart and wishlist from this browser. You’ll be asked to type DELETE.</p>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm" id="profile-delete" data-testid="profile-delete-data-btn">Delete data</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Return confirmation -->
+  <dialog class="modal" id="return-confirm-modal" data-testid="return-confirm-modal" aria-labelledby="return-confirm-title">
+    <form method="dialog">
+      <div class="modal-header"><h2 id="return-confirm-title">Confirm return request</h2></div>
+      <div class="modal-body"><div id="return-confirm-summary" data-testid="return-confirm-summary"></div></div>
+      <div class="modal-footer">
+        <button type="submit" value="cancel" class="btn" data-testid="return-confirm-cancel">Go back</button>
+        <button type="submit" value="confirm" class="btn btn-primary" data-testid="return-confirm-submit">Submit return</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="app-footer"></div>
+  <script src="app.js"></script>
+  <script src="pages/account.js"></script>
+</body>
+</html>

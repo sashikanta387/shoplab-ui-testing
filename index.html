@@ -3,125 +3,230 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShopLab — Catalog</title>
-  <meta name="description" content="ShopLab: a static e-commerce testbed for UI automation (Playwright, Cypress, Selenium).">
+  <title>ShopLab — Shop</title>
+  <meta name="description" content="ShopLab: a realistic e-commerce store for end-to-end UI automation practice.">
   <script src="auth-guard.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-page="catalog">
-  <a href="#main" class="visually-hidden" data-testid="skip-link">Skip to content</a>
-
-  <header class="site-header" data-testid="site-header">
-    <div class="container">
-      <a href="index.html" class="brand" id="brand-link" data-testid="header-brand-link" aria-label="ShopLab home">
-        <span class="brand-mark" aria-hidden="true">S</span>
-        <span>ShopLab <small>UI test store</small></span>
-      </a>
-      <button type="button" class="btn btn-ghost btn-icon menu-toggle" id="menu-toggle" data-testid="header-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="main-nav">☰</button>
-      <nav class="main-nav" id="main-nav" aria-label="Main navigation" data-testid="header-nav">
-        <a href="index.html" id="nav-shop" data-testid="nav-shop-link" aria-current="page">Shop</a>
-        <a href="admin-playground.html" id="nav-playground" data-testid="nav-playground-link">Playground</a>
-        <a href="checkout.html" id="nav-cart" class="cart-link" data-testid="nav-cart-link" aria-label="Cart and checkout">
-          🛒 Cart <span class="cart-count" id="cart-count" data-testid="header-cart-count" aria-live="polite">0</span>
-        </a>
-      </nav>
-    </div>
-  </header>
+  <a href="#main" class="skip-link" data-testid="skip-link">Skip to content</a>
+  <div id="app-header"></div>
 
   <main id="main" class="container">
-    <section class="hero" data-testid="catalog-hero" aria-labelledby="hero-title">
-      <div>
-        <h1 id="hero-title">Everything you need to practise automation</h1>
-        <p>Use code <code>SAVE10</code>, <code>WELCOME20</code> or <code>FREESHIP</code> at checkout.</p>
+    <!-- ================= Hero carousel ================= -->
+    <section class="carousel" id="hero-carousel" data-testid="hero-carousel" aria-roledescription="carousel" aria-label="Featured collections" data-active-index="0">
+      <div class="carousel-track">
+        <article class="carousel-slide slide-1" data-testid="carousel-slide" data-index="0" aria-roledescription="slide" aria-label="1 of 3">
+          <div class="slide-copy">
+            <p class="eyebrow">New season · Autumn 2026</p>
+            <h1 id="hero-title" data-testid="catalog-hero">Autumn essentials are here</h1>
+            <p class="hero-sub">Fresh arrivals for work, play and everything in between. Free shipping over $100.</p>
+            <div class="row">
+              <a href="index.html?tag=new#catalog" class="btn btn-primary btn-lg" data-testid="hero-shop-now" id="hero-shop-now">Shop new arrivals</a>
+              <a href="#catalog" class="btn btn-lg btn-outline" data-testid="hero-browse-all">Browse all</a>
+            </div>
+          </div>
+          <div class="slide-visual" aria-hidden="true"><span class="float f1">⌚</span><span class="float f2">👕</span><span class="float f3">🌿</span></div>
+        </article>
+        <article class="carousel-slide slide-2" data-testid="carousel-slide" data-index="1" aria-roledescription="slide" aria-label="2 of 3">
+          <div class="slide-copy">
+            <p class="eyebrow">Flash sale · Limited time</p>
+            <h2 class="slide-title">Up to 25% off bestsellers</h2>
+            <p class="hero-sub">Headphones, running shoes and sleep essentials at their lowest prices this season.</p>
+            <div class="row">
+              <a href="index.html?tag=sale#catalog" class="btn btn-primary btn-lg" data-testid="hero-shop-deals">Shop the sale</a>
+            </div>
+          </div>
+          <div class="slide-visual" aria-hidden="true"><span class="float f1">🎧</span><span class="float f2">👟</span><span class="float f3">🛏️</span></div>
+        </article>
+        <article class="carousel-slide slide-3" data-testid="carousel-slide" data-index="2" aria-roledescription="slide" aria-label="3 of 3">
+          <div class="slide-copy">
+            <p class="eyebrow">Make it yours</p>
+            <h2 class="slide-title">Personalise it with your own design</h2>
+            <p class="hero-sub">Upload artwork for a custom shirt print, keycaps or a bottle engraving — just $5 extra.</p>
+            <div class="row">
+              <a href="product-detail.html?id=6" class="btn btn-primary btn-lg" data-testid="hero-personalise">Design a shirt</a>
+            </div>
+          </div>
+          <div class="slide-visual" aria-hidden="true"><span class="float f1">🎨</span><span class="float f2">⌨️</span><span class="float f3">🥤</span></div>
+        </article>
       </div>
-      <a href="admin-playground.html" class="btn" id="hero-playground-link" data-testid="hero-playground-link">Open the edge-case playground →</a>
+      <div class="carousel-controls">
+        <button type="button" class="carousel-btn" id="carousel-prev" data-testid="carousel-prev" aria-label="Previous slide">‹</button>
+        <div class="carousel-dots" role="tablist" aria-label="Choose slide">
+          <button type="button" role="tab" class="carousel-dot" data-slide="0" data-testid="carousel-dot" aria-label="Slide 1"></button>
+          <button type="button" role="tab" class="carousel-dot" data-slide="1" data-testid="carousel-dot" aria-label="Slide 2"></button>
+          <button type="button" role="tab" class="carousel-dot" data-slide="2" data-testid="carousel-dot" aria-label="Slide 3"></button>
+        </div>
+        <button type="button" class="carousel-btn" id="carousel-next" data-testid="carousel-next" aria-label="Next slide">›</button>
+        <button type="button" class="carousel-btn" id="carousel-pause" data-testid="carousel-pause" aria-label="Pause slideshow" aria-pressed="false">❚❚</button>
+      </div>
     </section>
 
-    <div class="catalog-layout">
-      <!-- Filters -->
-      <aside class="panel filters" aria-labelledby="filters-title" data-testid="catalog-filters">
-        <form id="filters-form" name="filters-form" data-testid="catalog-filters-form" role="search" aria-label="Filter products">
-          <h2 id="filters-title" class="h3">Filters</h2>
+    <!-- ================= Flash deal ================= -->
+    <section class="deal-strip" aria-labelledby="deal-title" data-testid="deal-strip">
+      <div class="deal-head">
+        <div>
+          <p class="eyebrow">⚡ Today only</p>
+          <h2 id="deal-title" class="section-title" style="margin:0">Flash deals</h2>
+        </div>
+        <div class="countdown" id="deal-countdown" data-testid="deal-countdown" role="timer" aria-live="off" aria-label="Deal ends in">
+          <span class="muted small">Ends in</span>
+          <span class="cd-box"><strong data-testid="deal-countdown-hours">00</strong><small>hrs</small></span>
+          <span class="cd-box"><strong data-testid="deal-countdown-minutes">00</strong><small>min</small></span>
+          <span class="cd-box"><strong data-testid="deal-countdown-seconds">00</strong><small>sec</small></span>
+        </div>
+      </div>
+      <div class="scroller">
+        <button type="button" class="scroller-btn prev" data-testid="deal-scroll-prev" aria-label="Scroll deals left">‹</button>
+        <div class="scroller-track" id="deal-track" data-testid="deal-track" tabindex="0" aria-label="Deal products"></div>
+        <button type="button" class="scroller-btn next" data-testid="deal-scroll-next" aria-label="Scroll deals right">›</button>
+      </div>
+    </section>
 
-          <div class="field">
-            <label for="search-input">Search</label>
-            <input type="search" class="input" id="search-input" name="search" placeholder="Search products, vendors…" autocomplete="off" data-testid="catalog-search-input" aria-label="Search products">
-          </div>
+    <!-- ================= Categories ================= -->
+    <section class="category-strip" aria-label="Shop by category" data-testid="category-strip">
+      <h2 class="section-title">Shop by category</h2>
+      <div class="category-tiles" id="category-tiles"></div>
+    </section>
 
-          <div class="field">
-            <label for="category-filter">Category</label>
-            <select class="select" id="category-filter" name="category" data-testid="catalog-category-select" aria-label="Filter by category">
-              <option value="all">All categories</option>
-              <option value="electronics">Electronics</option>
-              <option value="fashion">Fashion</option>
-              <option value="home">Home &amp; Kitchen</option>
-              <option value="sports">Sports &amp; Outdoors</option>
-              <option value="books">Books</option>
-              <option value="beauty">Beauty</option>
+    <!-- ================= Catalog ================= -->
+    <section id="catalog" class="catalog-section" aria-labelledby="results-title">
+      <div class="catalog-layout">
+        <aside class="filters" aria-labelledby="filters-title" data-testid="catalog-filters">
+          <form id="filters-form" name="filters-form" data-testid="catalog-filters-form" role="search" aria-label="Filter products">
+            <h2 id="filters-title" class="filters-heading">Filters</h2>
+
+            <div class="field">
+              <label for="search-input">Search</label>
+              <input type="search" class="input" id="search-input" name="search" placeholder="Search products, vendors…" autocomplete="off" data-testid="catalog-search-input">
+            </div>
+
+            <div class="field">
+              <label for="category-filter">Category</label>
+              <select class="select" id="category-filter" name="category" data-testid="catalog-category-select">
+                <option value="all">All categories</option>
+                <option value="electronics">Electronics</option>
+                <option value="fashion">Fashion</option>
+                <option value="home">Home &amp; Kitchen</option>
+                <option value="sports">Sports &amp; Outdoors</option>
+                <option value="books">Books</option>
+                <option value="beauty">Beauty</option>
+              </select>
+            </div>
+
+            <fieldset data-testid="catalog-tag-filters">
+              <legend>Tags <span class="muted small">(match any)</span></legend>
+              <div class="chip-group">
+                <label class="chip"><input type="checkbox" name="tags" value="new" id="tag-new" data-testid="catalog-tag-new">New</label>
+                <label class="chip"><input type="checkbox" name="tags" value="sale" id="tag-sale" data-testid="catalog-tag-sale">Sale</label>
+                <label class="chip"><input type="checkbox" name="tags" value="bestseller" id="tag-bestseller" data-testid="catalog-tag-bestseller">Bestseller</label>
+                <label class="chip"><input type="checkbox" name="tags" value="eco" id="tag-eco" data-testid="catalog-tag-eco">Eco</label>
+                <label class="chip"><input type="checkbox" name="tags" value="limited" id="tag-limited" data-testid="catalog-tag-limited">Limited</label>
+              </div>
+            </fieldset>
+
+            <div class="field">
+              <label for="price-range">Max price: <output id="price-range-value" for="price-range" data-testid="catalog-price-range-value">$500</output></label>
+              <input type="range" id="price-range" name="maxPrice" min="0" max="500" step="10" value="500" data-testid="catalog-price-range" aria-valuetext="$500">
+              <div class="range-labels"><span>$0</span><span>$500</span></div>
+            </div>
+
+            <div class="field">
+              <label class="check" for="in-stock-only">
+                <input type="checkbox" id="in-stock-only" name="inStock" data-testid="catalog-in-stock-checkbox">
+                In stock only
+              </label>
+            </div>
+
+            <button type="button" class="btn btn-block" id="reset-filters" data-testid="catalog-reset-filters">Reset filters</button>
+          </form>
+        </aside>
+
+        <div>
+          <div class="catalog-toolbar">
+            <h2 id="results-title" class="section-title" style="margin:0">All products</h2>
+            <p class="muted" id="results-count" data-testid="catalog-results-count" aria-live="polite" style="margin:0">Loading products…</p>
+            <span class="spacer"></span>
+            <label for="sort-select" class="small">Sort by</label>
+            <select class="select" id="sort-select" name="sort" data-testid="catalog-sort-select">
+              <option value="featured">Featured</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="rating-desc">Top rated</option>
+              <option value="name-asc">Name: A–Z</option>
             </select>
           </div>
 
-          <fieldset data-testid="catalog-tag-filters">
-            <legend>Tags <span class="muted small">(match any)</span></legend>
-            <div class="chip-group">
-              <label class="chip"><input type="checkbox" name="tags" value="new" id="tag-new" data-testid="catalog-tag-new" aria-label="Tag: new">New</label>
-              <label class="chip"><input type="checkbox" name="tags" value="sale" id="tag-sale" data-testid="catalog-tag-sale" aria-label="Tag: sale">Sale</label>
-              <label class="chip"><input type="checkbox" name="tags" value="bestseller" id="tag-bestseller" data-testid="catalog-tag-bestseller" aria-label="Tag: bestseller">Bestseller</label>
-              <label class="chip"><input type="checkbox" name="tags" value="eco" id="tag-eco" data-testid="catalog-tag-eco" aria-label="Tag: eco">Eco</label>
-              <label class="chip"><input type="checkbox" name="tags" value="limited" id="tag-limited" data-testid="catalog-tag-limited" aria-label="Tag: limited">Limited</label>
-            </div>
-          </fieldset>
+          <div id="active-filters" class="active-filters" data-testid="catalog-active-filters"></div>
 
-          <div class="field">
-            <label for="price-range">Max price: <output id="price-range-value" for="price-range" data-testid="catalog-price-range-value">$500</output></label>
-            <input type="range" id="price-range" name="maxPrice" min="0" max="500" step="10" value="500" data-testid="catalog-price-range" aria-label="Maximum price" aria-valuetext="$500">
-            <div class="range-labels"><span>$0</span><span>$500</span></div>
+          <div class="product-grid" id="product-grid" data-testid="catalog-product-grid" data-state="loading" aria-busy="true">
+            <div class="skeleton-card" data-testid="catalog-loading"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
+            <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
           </div>
 
-          <div class="field">
-            <label class="check" for="in-stock-only">
-              <input type="checkbox" id="in-stock-only" name="inStock" data-testid="catalog-in-stock-checkbox" aria-label="Show in-stock items only">
-              In stock only
-            </label>
-          </div>
-
-          <button type="button" class="btn btn-block" id="reset-filters" data-testid="catalog-reset-filters" aria-label="Reset all filters" style="margin-top:1rem">Reset filters</button>
-        </form>
-      </aside>
-
-      <!-- Results -->
-      <section aria-labelledby="results-title">
-        <div class="catalog-toolbar">
-          <h2 id="results-title" class="visually-hidden">Products</h2>
-          <p class="muted" id="results-count" data-testid="catalog-results-count" aria-live="polite" style="margin:0">Loading products…</p>
-          <span class="spacer"></span>
-          <label for="sort-select" class="small">Sort by</label>
-          <select class="select" id="sort-select" name="sort" data-testid="catalog-sort-select" aria-label="Sort products">
-            <option value="featured">Featured</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="rating-desc">Top rated</option>
-            <option value="name-asc">Name: A–Z</option>
-          </select>
-        </div>
-
-        <div class="product-grid" id="product-grid" data-testid="catalog-product-grid" data-state="loading" aria-busy="true">
-          <div class="loading-state" data-testid="catalog-loading">
-            <span class="spinner spinner-lg" role="status" aria-label="Loading products"></span>
-            <span>Loading products…</span>
+          <div class="load-more" data-testid="catalog-load-more-wrap">
+            <p class="small muted" id="load-more-text" data-testid="catalog-load-more-text"></p>
+            <div class="progress load-progress" aria-hidden="true"><div class="progress-bar" id="load-more-bar"></div></div>
+            <button type="button" class="btn btn-lg btn-outline" id="load-more" data-testid="catalog-load-more" hidden>Load more products</button>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
+
+    <!-- ================= Recently viewed ================= -->
+    <section class="recent-section" id="recently-viewed" data-testid="recently-viewed" aria-labelledby="recent-title" hidden>
+      <h2 id="recent-title" class="section-title">Recently viewed</h2>
+      <div class="mini-grid" id="recent-grid" data-testid="recently-viewed-grid"></div>
+    </section>
+
+    <section class="value-props" aria-label="Why shop with us" data-testid="value-props">
+      <div><strong>🚚 Free shipping</strong><span>On orders over $100</span></div>
+      <div><strong>↩︎ 30-day returns</strong><span>Start a return from your account</span></div>
+      <div><strong>🔒 Secure checkout</strong><span>Test cards only, nothing is charged</span></div>
+      <div><strong>📦 Live tracking</strong><span>Follow every order to your door</span></div>
+    </section>
   </main>
 
-  <footer class="site-footer" data-testid="site-footer">
-    <div class="container">
-      <span>ShopLab — a static playground for UI automation. No real payments.</span>
-      <button type="button" class="btn btn-sm" id="reset-demo-state" data-testid="footer-reset-state" aria-label="Reset demo state">Reset demo state</button>
+  <!-- ================= Quick view dialog ================= -->
+  <dialog class="modal modal-lg" id="quick-view-modal" data-testid="quick-view-modal" aria-labelledby="quick-view-title">
+    <div class="quick-view">
+      <img id="quick-view-image" data-testid="quick-view-image" alt="">
+      <div class="quick-view-info">
+        <button type="button" class="modal-close qv-close" id="quick-view-close" data-testid="quick-view-close" aria-label="Close quick view">×</button>
+        <p class="product-category" id="quick-view-category"></p>
+        <h2 id="quick-view-title" data-testid="quick-view-title"></h2>
+        <div class="rating" id="quick-view-rating"></div>
+        <p class="price" id="quick-view-price" data-testid="quick-view-price"></p>
+        <p class="muted" id="quick-view-desc"></p>
+        <form id="quick-view-form" class="stack" novalidate>
+          <div class="field">
+            <label for="quick-view-variant">Option</label>
+            <select class="select" id="quick-view-variant" data-testid="quick-view-variant-select"></select>
+          </div>
+          <div class="field">
+            <label for="quick-view-color">Colour</label>
+            <select class="select" id="quick-view-color" data-testid="quick-view-color-select"></select>
+          </div>
+          <div class="row">
+            <div class="qty" role="group" aria-label="Quantity">
+              <button type="button" id="quick-view-dec" data-testid="quick-view-qty-decrement" aria-label="Decrease quantity">−</button>
+              <input type="number" id="quick-view-qty" value="1" min="1" data-testid="quick-view-qty-input" aria-label="Quantity">
+              <button type="button" id="quick-view-inc" data-testid="quick-view-qty-increment" aria-label="Increase quantity">+</button>
+            </div>
+            <button type="submit" class="btn btn-primary" id="quick-view-add" data-testid="quick-view-add-to-cart" style="flex:1">Add to Cart</button>
+          </div>
+          <a href="#" id="quick-view-details" data-testid="quick-view-details-link">View full details →</a>
+        </form>
+      </div>
     </div>
-  </footer>
+  </dialog>
 
+  <div id="app-footer"></div>
   <script src="app.js"></script>
+  <script src="pages/catalog.js"></script>
 </body>
 </html>
