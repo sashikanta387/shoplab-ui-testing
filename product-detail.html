@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — Product</title>
+  <script src="auth-guard.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="product-detail">
+  <a href="#main" class="visually-hidden" data-testid="skip-link">Skip to content</a>
+
+  <header class="site-header" data-testid="site-header">
+    <div class="container">
+      <a href="index.html" class="brand" id="brand-link" data-testid="header-brand-link" aria-label="ShopLab home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>ShopLab <small>UI test store</small></span>
+      </a>
+      <button type="button" class="btn btn-ghost btn-icon menu-toggle" id="menu-toggle" data-testid="header-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="main-nav">☰</button>
+      <nav class="main-nav" id="main-nav" aria-label="Main navigation" data-testid="header-nav">
+        <a href="index.html" id="nav-shop" data-testid="nav-shop-link">Shop</a>
+        <a href="admin-playground.html" id="nav-playground" data-testid="nav-playground-link">Playground</a>
+        <a href="checkout.html" id="nav-cart" class="cart-link" data-testid="nav-cart-link" aria-label="Cart and checkout">
+          🛒 Cart <span class="cart-count" id="cart-count" data-testid="header-cart-count" aria-live="polite">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <!-- Not found state -->
+    <section id="pdp-not-found" class="empty-state" data-testid="pdp-not-found" hidden style="margin-top:2rem">
+      <span class="emoji" aria-hidden="true">🔍</span>
+      <h1>Product not found</h1>
+      <p>The product you're looking for doesn't exist or was removed.</p>
+      <a href="index.html" class="btn btn-primary" id="pdp-back-to-shop" data-testid="pdp-back-to-shop">Back to shop</a>
+    </section>
+
+    <div id="pdp-content" data-testid="pdp-content" hidden>
+      <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb" data-testid="pdp-breadcrumb">
+          <li><a href="index.html" data-testid="pdp-breadcrumb-home">Shop</a></li>
+          <li id="pdp-breadcrumb-category" data-testid="pdp-breadcrumb-category"></li>
+          <li aria-current="page" id="pdp-breadcrumb-current" data-testid="pdp-breadcrumb-current"></li>
+        </ol>
+      </nav>
+
+      <div class="pdp">
+        <section aria-label="Product images" data-testid="pdp-gallery">
+          <div class="gallery-main">
+            <img id="pdp-main-image" data-testid="pdp-main-image" alt="">
+          </div>
+          <div class="gallery-thumbs" id="pdp-thumbs" data-testid="pdp-thumbnails" role="group" aria-label="Choose image"></div>
+        </section>
+
+        <section class="pdp-info" aria-labelledby="pdp-title">
+          <p class="product-category" id="pdp-category" data-testid="pdp-category"></p>
+          <h1 id="pdp-title" data-testid="pdp-title"></h1>
+          <p class="muted small">Sold by <strong id="pdp-vendor" data-testid="pdp-vendor"></strong></p>
+          <div class="rating" id="pdp-rating" data-testid="pdp-rating"></div>
+          <div class="price-row">
+            <p class="price" id="pdp-price" data-testid="pdp-price"></p>
+            <span class="compare-price" id="pdp-compare-price" data-testid="pdp-compare-price"></span>
+          </div>
+          <p class="stock-note" id="pdp-stock" data-testid="pdp-stock-status"></p>
+          <p id="pdp-short-description" data-testid="pdp-short-description"></p>
+
+          <form id="pdp-form" name="pdp-form" data-testid="pdp-form" novalidate>
+            <div class="pdp-options">
+              <div class="field">
+                <label for="pdp-variant" class="required">Option</label>
+                <select class="select" id="pdp-variant" name="variant" data-testid="pdp-variant-select" aria-label="Choose product option" aria-describedby="pdp-variant-error" required>
+                  <option value="">— Select an option —</option>
+                </select>
+                <p class="field-error" id="pdp-variant-error" data-testid="pdp-variant-error" role="alert"></p>
+              </div>
+
+              <div class="field">
+                <span class="field-label" id="pdp-color-label">Colour</span>
+                <fieldset class="swatches" id="pdp-colors" data-testid="pdp-color-options" aria-labelledby="pdp-color-label"></fieldset>
+              </div>
+
+              <div class="field">
+                <span class="field-label" id="pdp-qty-label">Quantity</span>
+                <div class="qty" data-testid="pdp-qty" role="group" aria-labelledby="pdp-qty-label">
+                  <button type="button" id="pdp-qty-decrement" data-testid="pdp-qty-decrement" aria-label="Decrease quantity">−</button>
+                  <input type="number" id="pdp-qty-input" name="qty" value="1" min="1" data-testid="pdp-qty-input" aria-label="Quantity">
+                  <button type="button" id="pdp-qty-increment" data-testid="pdp-qty-increment" aria-label="Increase quantity">+</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <button type="submit" class="btn btn-primary btn-lg" id="pdp-add-to-cart" data-testid="pdp-add-to-cart" aria-label="Add to cart">Add to Cart</button>
+              <button type="button" class="btn btn-lg wishlist-btn" id="pdp-wishlist-toggle" data-testid="pdp-wishlist-toggle" aria-pressed="false" aria-label="Add to wishlist">♡ Wishlist</button>
+              <a href="checkout.html" class="btn btn-lg btn-ghost" id="pdp-go-checkout" data-testid="pdp-go-to-checkout">Go to checkout →</a>
+            </div>
+            <div id="pdp-add-success" class="alert alert-success" data-testid="pdp-add-success" role="status" hidden style="margin-top:1rem"></div>
+          </form>
+        </section>
+      </div>
+
+      <!-- Tabs -->
+      <section class="tabs" data-testid="pdp-tabs">
+        <div class="tablist" role="tablist" aria-label="Product information">
+          <button type="button" class="tab" role="tab" id="tab-description" aria-controls="panel-description" aria-selected="true" data-testid="pdp-tab-description" data-tab="description">Description</button>
+          <button type="button" class="tab" role="tab" id="tab-reviews" aria-controls="panel-reviews" aria-selected="false" tabindex="-1" data-testid="pdp-tab-reviews" data-tab="reviews">Reviews (<span id="pdp-review-count" data-testid="pdp-review-count">0</span>)</button>
+          <button type="button" class="tab" role="tab" id="tab-terms" aria-controls="panel-terms" aria-selected="false" tabindex="-1" data-testid="pdp-tab-terms" data-tab="terms">Vendor Terms</button>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-description" aria-labelledby="tab-description" data-testid="pdp-panel-description" tabindex="0">
+          <p id="pdp-description" data-testid="pdp-description"></p>
+          <ul id="pdp-features" data-testid="pdp-features"></ul>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-reviews" aria-labelledby="tab-reviews" data-testid="pdp-panel-reviews" tabindex="0" hidden>
+          <div id="pdp-reviews" data-testid="pdp-review-list"></div>
+
+          <form class="panel" id="review-form" name="review-form" data-testid="review-form" novalidate style="margin-top:1.5rem">
+            <h3>Write a review</h3>
+            <div id="review-success" class="alert alert-success" data-testid="review-success" role="status" hidden style="margin-bottom:1rem">Thanks! Your review was posted.</div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="review-name" class="required">Name</label>
+                <input type="text" class="input" id="review-name" name="reviewName" data-testid="review-name-input" aria-describedby="review-name-error" autocomplete="name">
+                <p class="field-error" id="review-name-error" data-testid="review-name-error" role="alert"></p>
+              </div>
+              <div class="field">
+                <span class="field-label required" id="review-rating-label">Rating</span>
+                <fieldset class="star-input" data-testid="review-rating" aria-labelledby="review-rating-label" aria-describedby="review-rating-error">
+                  <input type="radio" name="rating" id="rating-5" value="5" data-testid="review-rating-5" aria-label="5 stars"><label for="rating-5" data-testid="review-star-5" title="5 stars">★</label>
+                  <input type="radio" name="rating" id="rating-4" value="4" data-testid="review-rating-4" aria-label="4 stars"><label for="rating-4" data-testid="review-star-4" title="4 stars">★</label>
+                  <input type="radio" name="rating" id="rating-3" value="3" data-testid="review-rating-3" aria-label="3 stars"><label for="rating-3" data-testid="review-star-3" title="3 stars">★</label>
+                  <input type="radio" name="rating" id="rating-2" value="2" data-testid="review-rating-2" aria-label="2 stars"><label for="rating-2" data-testid="review-star-2" title="2 stars">★</label>
+                  <input type="radio" name="rating" id="rating-1" value="1" data-testid="review-rating-1" aria-label="1 star"><label for="rating-1" data-testid="review-star-1" title="1 star">★</label>
+                </fieldset>
+                <p class="field-error" id="review-rating-error" data-testid="review-rating-error" role="alert"></p>
+              </div>
+              <div class="field span-2">
+                <label for="review-comment" class="required">Review</label>
+                <textarea class="textarea" id="review-comment" name="reviewComment" maxlength="500" data-testid="review-comment-input" aria-describedby="review-comment-error review-comment-count"></textarea>
+                <span class="hint" id="review-comment-count" data-testid="review-comment-count">0 / 500</span>
+                <p class="field-error" id="review-comment-error" data-testid="review-comment-error" role="alert"></p>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="review-submit" data-testid="review-submit" style="margin-top:1rem">Submit review</button>
+          </form>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="panel-terms" aria-labelledby="tab-terms" data-testid="pdp-panel-terms" tabindex="0" hidden>
+          <h3 id="pdp-terms-title" data-testid="pdp-terms-title"></h3>
+          <ol id="pdp-terms" data-testid="pdp-terms-list"></ol>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer" data-testid="site-footer">
+    <div class="container">
+      <span>ShopLab — a static playground for UI automation. No real payments.</span>
+      <button type="button" class="btn btn-sm" id="reset-demo-state" data-testid="footer-reset-state" aria-label="Reset demo state">Reset demo state</button>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

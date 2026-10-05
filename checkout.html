@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — Checkout</title>
+  <script src="auth-guard.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="checkout">
+  <a href="#main" class="visually-hidden" data-testid="skip-link">Skip to content</a>
+
+  <header class="site-header" data-testid="site-header">
+    <div class="container">
+      <a href="index.html" class="brand" id="brand-link" data-testid="header-brand-link" aria-label="ShopLab home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>ShopLab <small>UI test store</small></span>
+      </a>
+      <button type="button" class="btn btn-ghost btn-icon menu-toggle" id="menu-toggle" data-testid="header-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="main-nav">☰</button>
+      <nav class="main-nav" id="main-nav" aria-label="Main navigation" data-testid="header-nav">
+        <a href="index.html" id="nav-shop" data-testid="nav-shop-link">Shop</a>
+        <a href="admin-playground.html" id="nav-playground" data-testid="nav-playground-link">Playground</a>
+        <a href="checkout.html" id="nav-cart" class="cart-link" data-testid="nav-cart-link" aria-label="Cart and checkout" aria-current="page">
+          🛒 Cart <span class="cart-count" id="cart-count" data-testid="header-cart-count" aria-live="polite">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <!-- ===== Order success (shown after confirmation) ===== -->
+    <section id="order-success" class="panel success-hero" data-testid="order-success" hidden style="margin-top:1.5rem" aria-live="polite">
+      <div class="check-circle" aria-hidden="true">✓</div>
+      <h1 data-testid="order-success-title">Thank you! Your order is confirmed.</h1>
+      <div class="alert alert-success" id="order-success-banner" data-testid="order-success-banner" role="status" style="justify-content:center;max-width:520px;margin:1rem auto">
+        Order <strong id="order-id" data-testid="order-id"></strong> — total <strong id="order-total" data-testid="order-total"></strong>
+      </div>
+      <p class="muted">A confirmation was sent to <span id="order-email" data-testid="order-email"></span>.</p>
+      <div class="row" style="justify-content:center">
+        <button type="button" class="btn btn-primary" id="download-invoice-csv" data-testid="order-download-invoice-csv" aria-label="Download invoice as CSV">⬇ Download Invoice (CSV)</button>
+        <button type="button" class="btn" id="download-receipt-pdf" data-testid="order-download-receipt-pdf" aria-label="Download receipt as PDF">⬇ Download Receipt (PDF)</button>
+        <a href="index.html" class="btn btn-ghost" id="continue-shopping" data-testid="order-continue-shopping">Continue shopping</a>
+      </div>
+    </section>
+
+    <div id="checkout-view" data-testid="checkout-view">
+      <h1 style="margin-top:1.5rem">Checkout</h1>
+
+      <div id="checkout-error-summary" class="alert alert-error" data-testid="checkout-error-summary" role="alert" tabindex="-1" hidden>
+        <div>
+          <strong>Please fix the following fields:</strong>
+          <ul id="checkout-error-list" data-testid="checkout-error-list"></ul>
+        </div>
+      </div>
+
+      <div class="checkout-layout">
+        <!-- ===== Checkout form ===== -->
+        <form id="checkout-form" name="checkout-form" data-testid="checkout-form" novalidate aria-label="Checkout form">
+
+          <!-- 1. Contact -->
+          <section class="panel" aria-labelledby="contact-title">
+            <div class="panel-title"><span class="step-badge">1</span><h2 id="contact-title">Contact</h2></div>
+            <div class="form-grid">
+              <div class="field span-2">
+                <label for="full-name" class="required">Full name</label>
+                <input type="text" class="input" id="full-name" name="fullName" autocomplete="name" data-testid="checkout-fullname-input" aria-label="Full name" aria-describedby="full-name-error" required>
+                <p class="field-error" id="full-name-error" data-testid="checkout-fullname-error"></p>
+              </div>
+              <div class="field">
+                <label for="email" class="required">Email</label>
+                <input type="email" class="input" id="email" name="email" autocomplete="email" placeholder="you@example.com" data-testid="checkout-email-input" aria-label="Email address" aria-describedby="email-error" required>
+                <p class="field-error" id="email-error" data-testid="checkout-email-error"></p>
+              </div>
+              <div class="field">
+                <label for="phone">Phone <span class="muted small">(optional)</span></label>
+                <input type="tel" class="input" id="phone" name="phone" autocomplete="tel" placeholder="(555) 123-4567" inputmode="numeric" data-testid="checkout-phone-input" aria-label="Phone number" aria-describedby="phone-error">
+                <p class="field-error" id="phone-error" data-testid="checkout-phone-error"></p>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. Shipping address -->
+          <section class="panel" aria-labelledby="address-title">
+            <div class="panel-title"><span class="step-badge">2</span><h2 id="address-title">Shipping address</h2></div>
+            <div class="form-grid">
+              <div class="field span-2">
+                <label for="address" class="required">Street address</label>
+                <input type="text" class="input" id="address" name="address" autocomplete="street-address" data-testid="checkout-address-input" aria-label="Street address" aria-describedby="address-error" required>
+                <p class="field-error" id="address-error" data-testid="checkout-address-error"></p>
+              </div>
+              <div class="field">
+                <label for="city" class="required">City</label>
+                <input type="text" class="input" id="city" name="city" autocomplete="address-level2" data-testid="checkout-city-input" aria-label="City" aria-describedby="city-error" required>
+                <p class="field-error" id="city-error" data-testid="checkout-city-error"></p>
+              </div>
+              <div class="field">
+                <label for="postal-code" class="required">Postal code</label>
+                <input type="text" class="input" id="postal-code" name="postalCode" autocomplete="postal-code" placeholder="12345" data-testid="checkout-postal-input" aria-label="Postal code" aria-describedby="postal-code-error" required>
+                <p class="field-error" id="postal-code-error" data-testid="checkout-postal-error"></p>
+              </div>
+
+              <!-- Custom combobox (auto-suggest) -->
+              <div class="field combobox" id="country-combobox" data-testid="country-combobox">
+                <label for="country-input" id="country-label" class="required">Country</label>
+                <div class="combobox-field">
+                  <input type="text" class="input" id="country-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="country-listbox" aria-labelledby="country-label" aria-describedby="country-error" autocomplete="off" placeholder="Start typing…" data-testid="country-combobox-input">
+                  <button type="button" class="combobox-toggle" id="country-toggle" tabindex="-1" aria-label="Show countries" data-testid="country-combobox-toggle">▾</button>
+                  <ul class="listbox" id="country-listbox" role="listbox" aria-labelledby="country-label" data-testid="country-combobox-listbox" hidden></ul>
+                </div>
+                <input type="hidden" id="country" name="country" data-testid="country-combobox-value">
+                <p class="field-error" id="country-error" data-testid="checkout-country-error"></p>
+              </div>
+
+              <!-- Native select -->
+              <div class="field">
+                <label for="delivery-slot">Delivery time</label>
+                <select class="select" id="delivery-slot" name="deliverySlot" data-testid="checkout-delivery-slot-select" aria-label="Delivery time slot">
+                  <option value="anytime">Anytime</option>
+                  <option value="morning">Morning (8am – 12pm)</option>
+                  <option value="afternoon">Afternoon (12pm – 5pm)</option>
+                  <option value="evening">Evening (5pm – 9pm)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. Shipping method -->
+          <section class="panel" aria-labelledby="shipping-title">
+            <div class="panel-title"><span class="step-badge">3</span><h2 id="shipping-title">Shipping method</h2></div>
+            <div class="radio-cards" role="radiogroup" aria-labelledby="shipping-title" data-testid="checkout-shipping-methods">
+              <label class="radio-card" for="ship-standard">
+                <input type="radio" name="shipping" id="ship-standard" value="standard" checked data-testid="checkout-shipping-standard" aria-label="Standard shipping">
+                <span><span class="rc-title">Standard</span><br><span class="muted small">5–7 business days · free over $100</span></span>
+                <span class="rc-price" id="ship-standard-price" data-testid="checkout-shipping-standard-price">$5.99</span>
+              </label>
+              <label class="radio-card" for="ship-express">
+                <input type="radio" name="shipping" id="ship-express" value="express" data-testid="checkout-shipping-express" aria-label="Express shipping">
+                <span><span class="rc-title">Express</span><br><span class="muted small">2–3 business days</span></span>
+                <span class="rc-price">$14.99</span>
+              </label>
+              <label class="radio-card" for="ship-overnight">
+                <input type="radio" name="shipping" id="ship-overnight" value="overnight" data-testid="checkout-shipping-overnight" aria-label="Overnight shipping">
+                <span><span class="rc-title">Overnight</span><br><span class="muted small">Next business day</span></span>
+                <span class="rc-price">$29.99</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- 4. Payment -->
+          <section class="panel" aria-labelledby="payment-title">
+            <div class="panel-title"><span class="step-badge">4</span><h2 id="payment-title">Payment</h2></div>
+
+            <div class="radio-cards" role="radiogroup" aria-label="Payment method" data-testid="checkout-payment-methods" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:1rem">
+              <label class="radio-card" for="pay-card">
+                <input type="radio" name="paymentMethod" id="pay-card" value="card" checked data-testid="checkout-payment-card" aria-label="Pay by credit card">
+                <span class="rc-title">💳 Credit card</span>
+              </label>
+              <label class="radio-card" for="pay-gateway">
+                <input type="radio" name="paymentMethod" id="pay-gateway" value="gateway" data-testid="checkout-payment-gateway" aria-label="Pay with SecurePay gateway">
+                <span class="rc-title">🔐 SecurePay (iframe)</span>
+              </label>
+            </div>
+
+            <div id="card-fields" data-testid="checkout-card-fields">
+              <div class="form-grid">
+                <div class="field span-2">
+                  <label for="card-name" class="required">Name on card</label>
+                  <input type="text" class="input" id="card-name" name="cardName" autocomplete="cc-name" data-testid="checkout-card-name-input" aria-label="Name on card" aria-describedby="card-name-error">
+                  <p class="field-error" id="card-name-error" data-testid="checkout-card-name-error"></p>
+                </div>
+                <div class="field span-2">
+                  <label for="card-number" class="required">Card number <span class="card-brand" id="card-brand" data-testid="checkout-card-brand">CARD</span></label>
+                  <input type="text" class="input mono" id="card-number" name="cardNumber" inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456" maxlength="19" data-testid="checkout-card-number-input" aria-label="Card number" aria-describedby="card-number-error card-number-hint">
+                  <span class="hint" id="card-number-hint">Test card: 4242 4242 4242 4242 (any future expiry, any CVV)</span>
+                  <p class="field-error" id="card-number-error" data-testid="checkout-card-number-error"></p>
+                </div>
+                <div class="field">
+                  <label for="card-expiry" class="required">Expiry (MM/YY)</label>
+                  <input type="text" class="input mono" id="card-expiry" name="cardExpiry" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5" data-testid="checkout-card-expiry-input" aria-label="Card expiry date" aria-describedby="card-expiry-error">
+                  <p class="field-error" id="card-expiry-error" data-testid="checkout-card-expiry-error"></p>
+                </div>
+                <div class="field">
+                  <label for="card-cvv" class="required">CVV</label>
+                  <input type="password" class="input mono" id="card-cvv" name="cardCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4" data-testid="checkout-card-cvv-input" aria-label="Card security code" aria-describedby="card-cvv-error">
+                  <p class="field-error" id="card-cvv-error" data-testid="checkout-card-cvv-error"></p>
+                </div>
+              </div>
+            </div>
+
+            <div id="gateway-fields" data-testid="checkout-gateway-fields" hidden>
+              <p class="small muted">The payment form below lives inside an <code>&lt;iframe&gt;</code>. Switch into the frame to interact with it.</p>
+              <div class="iframe-shell">
+                <iframe id="payment-gateway-frame" name="payment-gateway-frame" title="SecurePay payment gateway" data-testid="payment-gateway-iframe" height="290"></iframe>
+              </div>
+              <div id="gateway-status" class="alert alert-info" data-testid="checkout-gateway-status" role="status" style="margin-top:.75rem">Waiting for gateway authorization…</div>
+              <input type="hidden" id="gateway-token" name="gatewayToken" data-testid="checkout-gateway-token">
+              <p class="field-error" id="gateway-error" data-testid="checkout-gateway-error"></p>
+            </div>
+          </section>
+
+          <!-- 5. Extras -->
+          <section class="panel" aria-labelledby="extras-title">
+            <div class="panel-title"><span class="step-badge">5</span><h2 id="extras-title">Extras &amp; review</h2></div>
+
+            <div class="field">
+              <label for="order-notes">Order notes</label>
+              <textarea class="textarea" id="order-notes" name="notes" placeholder="Leave at the front door…" data-testid="checkout-notes-input" aria-label="Order notes"></textarea>
+            </div>
+
+            <div class="row" style="margin:1rem 0">
+              <button type="button" class="btn" id="gift-message-btn" data-testid="checkout-gift-message-btn" aria-label="Add gift message (opens prompt)">🎁 Add gift message</button>
+              <span class="small muted">Gift message: <strong id="gift-message-value" data-testid="checkout-gift-message-value">none</strong></span>
+              <span class="spacer"></span>
+              <button type="button" class="btn btn-ghost" id="help-alert-btn" data-testid="checkout-help-alert-btn" aria-label="Show help (opens alert)">❓ Need help?</button>
+            </div>
+
+            <div class="stack">
+              <label class="check" for="newsletter">
+                <input type="checkbox" id="newsletter" name="newsletter" data-testid="checkout-newsletter-checkbox" aria-label="Subscribe to newsletter">
+                Email me about deals and new arrivals
+              </label>
+              <label class="check" for="agree-terms">
+                <input type="checkbox" id="agree-terms" name="agreeTerms" data-testid="checkout-terms-checkbox" aria-label="Agree to terms and conditions" aria-describedby="agree-terms-hint" required>
+                <span>I agree to the <a href="product-detail.html?id=1&amp;tab=terms" target="_blank" rel="noopener" data-testid="checkout-terms-link">Terms &amp; Conditions</a> <span class="required"></span></span>
+              </label>
+              <p class="hint small muted" id="agree-terms-hint">The Place Order button stays disabled until you accept the terms.</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="place-order" data-testid="checkout-place-order" aria-label="Place order" disabled style="margin-top:1rem">Place Order</button>
+          </section>
+        </form>
+
+        <!-- ===== Order summary ===== -->
+        <aside class="panel summary" aria-labelledby="summary-title" data-testid="checkout-summary">
+          <div class="row" style="margin-bottom:.75rem">
+            <h2 id="summary-title" style="margin:0">Order summary</h2>
+            <span class="spacer"></span>
+            <button type="button" class="btn btn-sm btn-ghost" id="clear-cart" data-testid="cart-clear-btn" aria-label="Clear cart (opens confirm)">Clear cart</button>
+          </div>
+          <p class="small muted" style="margin-bottom:.5rem">Drag items <span aria-hidden="true">⠿</span> to reorder.</p>
+
+          <ul class="cart-list" id="cart-list" data-testid="cart-list" aria-label="Cart items" data-group="cart"></ul>
+
+          <div id="cart-empty" class="empty-state" data-testid="cart-empty-state" hidden>
+            <span class="emoji" aria-hidden="true">🛒</span>
+            <p style="margin:0">Your cart is empty.</p>
+            <div class="row" style="justify-content:center">
+              <a href="index.html" class="btn btn-sm" id="cart-browse" data-testid="cart-browse-link">Browse products</a>
+              <button type="button" class="btn btn-sm btn-primary" id="cart-add-samples" data-testid="cart-add-samples" aria-label="Add sample items to cart">Add sample items</button>
+            </div>
+          </div>
+
+          <!-- Promo code -->
+          <div class="field" style="margin-top:1rem" data-testid="promo-section">
+            <label for="promo-code">Promo code</label>
+            <div class="input-group">
+              <input type="text" class="input" id="promo-code" name="promoCode" placeholder="SAVE10" autocomplete="off" data-testid="promo-code-input" aria-label="Promo code" aria-describedby="promo-error">
+              <button type="button" class="btn" id="apply-promo" data-testid="promo-apply-btn" aria-label="Apply promo code">Apply</button>
+            </div>
+            <div id="promo-loading" class="promo-loading" data-testid="promo-loading" role="status" hidden>
+              <span class="spinner" aria-hidden="true"></span> Validating promo code…
+            </div>
+            <div id="promo-success" class="alert alert-success" data-testid="promo-success-banner" role="status" hidden>
+              <span id="promo-success-text" data-testid="promo-success-text"></span>
+              <button type="button" class="alert-close" id="promo-remove" data-testid="promo-remove-btn" aria-label="Remove promo code">×</button>
+            </div>
+            <p class="field-error" id="promo-error" data-testid="promo-error" role="alert"></p>
+          </div>
+
+          <dl class="totals" data-testid="cart-totals">
+            <div><dt>Subtotal (<span id="summary-count" data-testid="cart-item-count">0</span> items)</dt><dd id="summary-subtotal" data-testid="cart-subtotal">$0.00</dd></div>
+            <div id="summary-discount-row" hidden><dt>Discount</dt><dd id="summary-discount" class="discount-value" data-testid="cart-discount">−$0.00</dd></div>
+            <div><dt>Shipping</dt><dd id="summary-shipping" data-testid="cart-shipping">$0.00</dd></div>
+            <div><dt>Tax (8%)</dt><dd id="summary-tax" data-testid="cart-tax">$0.00</dd></div>
+            <div class="total-row"><dt>Total</dt><dd id="summary-total" data-testid="cart-total">$0.00</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== Confirm order modal (native <dialog>) ===== -->
+  <dialog class="modal" id="confirm-order-modal" data-testid="confirm-order-modal" aria-labelledby="confirm-order-title" aria-describedby="confirm-order-desc">
+    <div class="modal-header">
+      <h2 id="confirm-order-title">Confirm your order</h2>
+      <button type="button" class="modal-close" id="confirm-order-close" data-testid="confirm-order-close" aria-label="Close dialog">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-order-desc" class="muted">Please review your order before we charge your payment method.</p>
+      <table class="summary-table" data-testid="confirm-order-summary">
+        <tbody id="confirm-order-lines"></tbody>
+      </table>
+      <div id="confirm-order-processing" class="promo-loading" data-testid="confirm-order-processing" role="status" hidden style="margin-top:1rem">
+        <span class="spinner" aria-hidden="true"></span> Processing payment…
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" id="confirm-order-cancel" data-testid="confirm-order-cancel" aria-label="Cancel order">Cancel</button>
+      <button type="button" class="btn btn-primary" id="confirm-order-submit" data-testid="confirm-order-submit" aria-label="Confirm and pay">Confirm &amp; Pay</button>
+    </div>
+  </dialog>
+
+  <footer class="site-footer" data-testid="site-footer">
+    <div class="container">
+      <span>ShopLab — a static playground for UI automation. No real payments.</span>
+      <button type="button" class="btn btn-sm" id="reset-demo-state" data-testid="footer-reset-state" aria-label="Reset demo state">Reset demo state</button>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

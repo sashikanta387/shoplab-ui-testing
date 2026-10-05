@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — Sign in</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="login" class="auth-page">
+  <main id="main" class="auth-shell">
+    <a href="login.html" class="brand auth-brand" data-testid="login-brand" aria-label="ShopLab">
+      <span class="brand-mark" aria-hidden="true">S</span>
+      <span>ShopLab <small>UI test store</small></span>
+    </a>
+
+    <section class="panel auth-card" aria-labelledby="login-title" data-testid="login-card">
+      <h1 id="login-title">Sign in</h1>
+      <p class="muted">Use one of the demo accounts below to enter the store.</p>
+
+      <div id="login-info" class="alert alert-info" data-testid="login-info-banner" role="status" hidden></div>
+      <div id="login-error" class="alert alert-error" data-testid="login-error-banner" role="alert" tabindex="-1" hidden>
+        <span id="login-error-text" data-testid="login-error-text"></span>
+        <button type="button" class="alert-close" id="login-error-close" data-testid="login-error-close" aria-label="Dismiss error">×</button>
+      </div>
+
+      <form id="login-form" name="login-form" data-testid="login-form" novalidate aria-label="Sign in form">
+        <div class="field">
+          <label for="username" class="required">Username</label>
+          <input type="text" class="input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false"
+                 placeholder="standard_user" data-testid="login-username-input" aria-label="Username" aria-describedby="username-error" required>
+          <p class="field-error" id="username-error" data-testid="login-username-error"></p>
+        </div>
+
+        <div class="field">
+          <label for="password" class="required">Password</label>
+          <div class="input-group">
+            <input type="password" class="input" id="password" name="password" autocomplete="current-password"
+                   placeholder="••••••••" data-testid="login-password-input" aria-label="Password" aria-describedby="password-error" required>
+            <button type="button" class="btn" id="toggle-password" data-testid="login-password-toggle" aria-label="Show password" aria-pressed="false" aria-controls="password">Show</button>
+          </div>
+          <p class="field-error" id="password-error" data-testid="login-password-error"></p>
+        </div>
+
+        <div class="row" style="justify-content:space-between">
+          <label class="check" for="remember-me">
+            <input type="checkbox" id="remember-me" name="rememberMe" data-testid="login-remember-checkbox" aria-label="Remember me">
+            Remember me
+          </label>
+          <a href="#" id="forgot-password" data-testid="login-forgot-password-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" id="login-submit" data-testid="login-submit-btn" aria-label="Sign in" style="margin-top:1.25rem">Sign in</button>
+      </form>
+
+      <details class="demo-creds" data-testid="login-demo-credentials" open>
+        <summary>Demo accounts</summary>
+        <table class="summary-table">
+          <tbody>
+            <tr><td><code data-testid="login-demo-user-standard">standard_user</code></td><td>Signs in normally</td></tr>
+            <tr><td><code data-testid="login-demo-user-locked">locked_user</code></td><td>Locked-out error</td></tr>
+            <tr><td><code data-testid="login-demo-user-slow">slow_user</code></td><td>Signs in after a 4 s delay</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin:.5rem 0 0">Password for every account: <code data-testid="login-demo-password">ShopLab@123</code></p>
+      </details>
+    </section>
+
+    <p class="small muted" style="text-align:center">Demo only. Credentials are checked in the browser and nothing is sent anywhere.</p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

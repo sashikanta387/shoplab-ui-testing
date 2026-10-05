@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — Catalog</title>
+  <meta name="description" content="ShopLab: a static e-commerce testbed for UI automation (Playwright, Cypress, Selenium).">
+  <script src="auth-guard.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="catalog">
+  <a href="#main" class="visually-hidden" data-testid="skip-link">Skip to content</a>
+
+  <header class="site-header" data-testid="site-header">
+    <div class="container">
+      <a href="index.html" class="brand" id="brand-link" data-testid="header-brand-link" aria-label="ShopLab home">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>ShopLab <small>UI test store</small></span>
+      </a>
+      <button type="button" class="btn btn-ghost btn-icon menu-toggle" id="menu-toggle" data-testid="header-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="main-nav">☰</button>
+      <nav class="main-nav" id="main-nav" aria-label="Main navigation" data-testid="header-nav">
+        <a href="index.html" id="nav-shop" data-testid="nav-shop-link" aria-current="page">Shop</a>
+        <a href="admin-playground.html" id="nav-playground" data-testid="nav-playground-link">Playground</a>
+        <a href="checkout.html" id="nav-cart" class="cart-link" data-testid="nav-cart-link" aria-label="Cart and checkout">
+          🛒 Cart <span class="cart-count" id="cart-count" data-testid="header-cart-count" aria-live="polite">0</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="container">
+    <section class="hero" data-testid="catalog-hero" aria-labelledby="hero-title">
+      <div>
+        <h1 id="hero-title">Everything you need to practise automation</h1>
+        <p>Use code <code>SAVE10</code>, <code>WELCOME20</code> or <code>FREESHIP</code> at checkout.</p>
+      </div>
+      <a href="admin-playground.html" class="btn" id="hero-playground-link" data-testid="hero-playground-link">Open the edge-case playground →</a>
+    </section>
+
+    <div class="catalog-layout">
+      <!-- Filters -->
+      <aside class="panel filters" aria-labelledby="filters-title" data-testid="catalog-filters">
+        <form id="filters-form" name="filters-form" data-testid="catalog-filters-form" role="search" aria-label="Filter products">
+          <h2 id="filters-title" class="h3">Filters</h2>
+
+          <div class="field">
+            <label for="search-input">Search</label>
+            <input type="search" class="input" id="search-input" name="search" placeholder="Search products, vendors…" autocomplete="off" data-testid="catalog-search-input" aria-label="Search products">
+          </div>
+
+          <div class="field">
+            <label for="category-filter">Category</label>
+            <select class="select" id="category-filter" name="category" data-testid="catalog-category-select" aria-label="Filter by category">
+              <option value="all">All categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="fashion">Fashion</option>
+              <option value="home">Home &amp; Kitchen</option>
+              <option value="sports">Sports &amp; Outdoors</option>
+              <option value="books">Books</option>
+              <option value="beauty">Beauty</option>
+            </select>
+          </div>
+
+          <fieldset data-testid="catalog-tag-filters">
+            <legend>Tags <span class="muted small">(match any)</span></legend>
+            <div class="chip-group">
+              <label class="chip"><input type="checkbox" name="tags" value="new" id="tag-new" data-testid="catalog-tag-new" aria-label="Tag: new">New</label>
+              <label class="chip"><input type="checkbox" name="tags" value="sale" id="tag-sale" data-testid="catalog-tag-sale" aria-label="Tag: sale">Sale</label>
+              <label class="chip"><input type="checkbox" name="tags" value="bestseller" id="tag-bestseller" data-testid="catalog-tag-bestseller" aria-label="Tag: bestseller">Bestseller</label>
+              <label class="chip"><input type="checkbox" name="tags" value="eco" id="tag-eco" data-testid="catalog-tag-eco" aria-label="Tag: eco">Eco</label>
+              <label class="chip"><input type="checkbox" name="tags" value="limited" id="tag-limited" data-testid="catalog-tag-limited" aria-label="Tag: limited">Limited</label>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label for="price-range">Max price: <output id="price-range-value" for="price-range" data-testid="catalog-price-range-value">$500</output></label>
+            <input type="range" id="price-range" name="maxPrice" min="0" max="500" step="10" value="500" data-testid="catalog-price-range" aria-label="Maximum price" aria-valuetext="$500">
+            <div class="range-labels"><span>$0</span><span>$500</span></div>
+          </div>
+
+          <div class="field">
+            <label class="check" for="in-stock-only">
+              <input type="checkbox" id="in-stock-only" name="inStock" data-testid="catalog-in-stock-checkbox" aria-label="Show in-stock items only">
+              In stock only
+            </label>
+          </div>
+
+          <button type="button" class="btn btn-block" id="reset-filters" data-testid="catalog-reset-filters" aria-label="Reset all filters" style="margin-top:1rem">Reset filters</button>
+        </form>
+      </aside>
+
+      <!-- Results -->
+      <section aria-labelledby="results-title">
+        <div class="catalog-toolbar">
+          <h2 id="results-title" class="visually-hidden">Products</h2>
+          <p class="muted" id="results-count" data-testid="catalog-results-count" aria-live="polite" style="margin:0">Loading products…</p>
+          <span class="spacer"></span>
+          <label for="sort-select" class="small">Sort by</label>
+          <select class="select" id="sort-select" name="sort" data-testid="catalog-sort-select" aria-label="Sort products">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating-desc">Top rated</option>
+            <option value="name-asc">Name: A–Z</option>
+          </select>
+        </div>
+
+        <div class="product-grid" id="product-grid" data-testid="catalog-product-grid" data-state="loading" aria-busy="true">
+          <div class="loading-state" data-testid="catalog-loading">
+            <span class="spinner spinner-lg" role="status" aria-label="Loading products"></span>
+            <span>Loading products…</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer" data-testid="site-footer">
+    <div class="container">
+      <span>ShopLab — a static playground for UI automation. No real payments.</span>
+      <button type="button" class="btn btn-sm" id="reset-demo-state" data-testid="footer-reset-state" aria-label="Reset demo state">Reset demo state</button>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
