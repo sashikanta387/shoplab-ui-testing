@@ -1,11 +1,14 @@
 /* ==========================================================================
-   ShopLab — UI Automation Testbed
-   Single classic script (no modules, no build step) so the site works from
-   file:// as well as GitHub Pages. Each page sets <body data-page="..."> and
-   the router at the bottom runs the matching init function.
+   ShopLab core: data, state, reusable UI components and the site shell.
+   Classic script (no modules, no build step) so the site works from file://
+   and GitHub Pages. Page scripts in /pages register an init function on
+   ShopLab.pages[<body data-page>] and the boot code at the bottom runs it.
    ========================================================================== */
 (function () {
   'use strict';
+
+  const SL = (window.ShopLab = window.ShopLab || {});
+  SL.pages = SL.pages || {};
 
   // ==========================================================================
   // Data
@@ -19,7 +22,12 @@
     books: 'Books',
     beauty: 'Beauty',
   };
+  const CATEGORY_EMOJI = { electronics: '🎧', fashion: '👕', home: '☕', sports: '👟', books: '📘', beauty: '🌿' };
 
+  /* Flags:
+     customizable         → optional "Add personalisation" (design upload + text, +$5)
+     requiresPrescription → prescription upload is mandatory before add-to-cart
+     sizeGuide            → shows the Size guide dialog link */
   const PRODUCTS = [
     {
       id: 1, name: 'Aurora Wireless Headphones', category: 'electronics', price: 129.99, compareAt: 159.99,
@@ -39,15 +47,15 @@
     },
     {
       id: 3, name: 'Pixel Pro Mechanical Keyboard', category: 'electronics', price: 89.5,
-      rating: 4.8, tags: ['bestseller'], stock: 3, vendor: 'KeyCraft', emoji: '⌨️', color: '#22c55e',
+      rating: 4.8, tags: ['bestseller'], stock: 3, vendor: 'KeyCraft', emoji: '⌨️', color: '#22c55e', customizable: true,
       options: ['Linear switches', 'Tactile switches', 'Clicky switches'],
       colors: [{ name: 'Charcoal', hex: '#27272a' }, { name: 'Mint', hex: '#a7f3d0' }],
-      short: 'Hot-swappable 75% keyboard with PBT keycaps and per-key RGB.',
-      features: ['Hot-swappable switches', 'PBT double-shot keycaps', 'Per-key RGB', 'USB-C detachable cable'],
+      short: 'Hot-swappable 75% keyboard with PBT keycaps and per-key RGB. Add your own keycap artwork.',
+      features: ['Hot-swappable switches', 'PBT double-shot keycaps', 'Per-key RGB', 'Custom keycap artwork available'],
     },
     {
       id: 4, name: 'Trailblazer Running Shoes', category: 'sports', price: 119.0, compareAt: 139.0,
-      rating: 4.3, tags: ['sale', 'eco'], stock: 15, vendor: 'Stride Co.', emoji: '👟', color: '#f97316',
+      rating: 4.3, tags: ['sale', 'eco'], stock: 15, vendor: 'Stride Co.', emoji: '👟', color: '#f97316', sizeGuide: true,
       options: ['US 7', 'US 8', 'US 9', 'US 10', 'US 11'],
       colors: [{ name: 'Sunset', hex: '#f97316' }, { name: 'Ocean', hex: '#0284c7' }, { name: 'Stone', hex: '#a8a29e' }],
       short: 'Lightweight trail runners made with 60% recycled materials.',
@@ -55,19 +63,19 @@
     },
     {
       id: 5, name: 'Summit Insulated Bottle', category: 'sports', price: 34.99,
-      rating: 4.7, tags: ['eco', 'bestseller'], stock: 50, vendor: 'Summit Gear', emoji: '🥤', color: '#14b8a6',
+      rating: 4.7, tags: ['eco', 'bestseller'], stock: 50, vendor: 'Summit Gear', emoji: '🥤', color: '#14b8a6', customizable: true,
       options: ['500 ml', '750 ml', '1 L'],
       colors: [{ name: 'Glacier', hex: '#99f6e4' }, { name: 'Forest', hex: '#166534' }],
-      short: 'Keeps drinks cold for 24 hours or hot for 12.',
-      features: ['Double-wall vacuum insulation', 'Leak-proof lid', 'Dishwasher safe', 'BPA free'],
+      short: 'Keeps drinks cold for 24 hours or hot for 12. Add a custom engraving.',
+      features: ['Double-wall vacuum insulation', 'Leak-proof lid', 'Dishwasher safe', 'Custom engraving available'],
     },
     {
       id: 6, name: 'Linen Everyday Shirt', category: 'fashion', price: 49.0,
-      rating: 4.1, tags: ['new', 'eco'], stock: 30, vendor: 'Thread & Loom', emoji: '👕', color: '#a855f7',
+      rating: 4.1, tags: ['new', 'eco'], stock: 30, vendor: 'Thread & Loom', emoji: '👕', color: '#a855f7', customizable: true, sizeGuide: true,
       options: ['XS', 'S', 'M', 'L', 'XL'],
       colors: [{ name: 'Oat', hex: '#e7dcc8' }, { name: 'Sage', hex: '#9caf88' }, { name: 'Navy', hex: '#1e3a8a' }],
-      short: 'Breathable European linen in a relaxed fit.',
-      features: ['100% European flax linen', 'Relaxed fit', 'Corozo buttons', 'Pre-washed for softness'],
+      short: 'Breathable European linen in a relaxed fit. Upload your own design for a custom print.',
+      features: ['100% European flax linen', 'Relaxed fit', 'Corozo buttons', 'Custom print available'],
     },
     {
       id: 7, name: 'Classic Leather Wallet', category: 'fashion', price: 59.0,
@@ -80,7 +88,7 @@
     {
       id: 8, name: 'Barista Pour-Over Kettle', category: 'home', price: 74.95,
       rating: 4.6, tags: ['bestseller'], stock: 12, vendor: 'BrewHaus', emoji: '☕', color: '#78716c',
-      options: ['Stovetop', 'Electric (+$0)'],
+      options: ['Stovetop', 'Electric'],
       colors: [{ name: 'Matte Black', hex: '#1c1917' }, { name: 'Copper', hex: '#c2410c' }],
       short: 'Gooseneck kettle with a built-in thermometer for precise pours.',
       features: ['Gooseneck spout', 'Built-in thermometer', '1 L capacity', 'Stainless steel body'],
@@ -117,6 +125,14 @@
       short: 'Belt-drive turntable in a hand-finished walnut plinth. Only a few left.',
       features: ['Belt-drive, 33/45 RPM', 'Built-in phono preamp', 'Bluetooth output', 'Walnut plinth'],
     },
+    {
+      id: 13, name: 'ClearView Prescription Glasses', category: 'fashion', price: 89.0,
+      rating: 4.5, tags: ['new'], stock: 20, vendor: 'ClearView Optics', emoji: '👓', color: '#0891b2', requiresPrescription: true,
+      options: ['Single vision', 'Progressive', 'Reading'],
+      colors: [{ name: 'Tortoise', hex: '#92400e' }, { name: 'Crystal', hex: '#e5e7eb' }, { name: 'Black', hex: '#111111' }],
+      short: 'Lightweight frames with blue-light filtering lenses, made to your prescription.',
+      features: ['Blue-light filtering lenses', 'Anti-scratch coating', 'Prescription required at purchase', 'Free adjustments'],
+    },
   ];
 
   const REVIEW_POOL = [
@@ -144,14 +160,42 @@
   };
 
   const SHIPPING_RATES = { standard: 5.99, express: 14.99, overnight: 29.99 };
+  const SHIPPING_LABELS = { standard: 'Standard (5–7 days)', express: 'Express (2–3 days)', overnight: 'Overnight' };
   const FREE_SHIPPING_THRESHOLD = 100;
   const TAX_RATE = 0.08;
+  const PERSONALIZATION_FEE = 5;
+
+  const CARRIERS = [
+    { group: 'Domestic', options: [['ups', 'UPS'], ['fedex', 'FedEx'], ['usps', 'USPS']] },
+    { group: 'International', options: [['dhl', 'DHL Express'], ['royal-mail', 'Royal Mail'], ['canada-post', 'Canada Post (unavailable)', true]] },
+  ];
+  const carrierName = (code) => {
+    for (const g of CARRIERS) for (const [v, l] of g.options) if (v === code) return l;
+    return code || '';
+  };
+
+  const ORDER_STATUS = {
+    processing: { label: 'Processing', badge: 'badge-info' },
+    shipped: { label: 'Shipped', badge: 'badge-new' },
+    delivered: { label: 'Delivered', badge: 'badge-success' },
+    cancelled: { label: 'Cancelled', badge: 'badge-danger' },
+    return_requested: { label: 'Return requested', badge: 'badge-warning' },
+    returned: { label: 'Returned & refunded', badge: '' },
+    return_rejected: { label: 'Return rejected', badge: 'badge-danger' },
+  };
 
   const KEYS = {
+    session: 'shoplab.session',
+    users: 'shoplab.users',
+    remembered: 'shoplab.rememberedUser',
     cart: 'shoplab.cart',
     wishlist: 'shoplab.wishlist',
     orders: 'shoplab.orders',
-    inventory: 'shoplab.inventory',
+    overrides: 'shoplab.productOverrides',
+    consent: 'shoplab.cookieConsent',
+    notify: 'shoplab.backInStock',
+    recent: 'shoplab.recentlyViewed',
+    profilePrefix: 'shoplab.profile.',
   };
 
   // ==========================================================================
@@ -165,10 +209,13 @@
   const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const param = (name) => new URLSearchParams(location.search).get(name);
-  const getProduct = (id) => PRODUCTS.find((p) => p.id === Number(id));
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const stars = (r) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math.round(r));
   const today = () => new Date().toISOString().slice(0, 10);
+  const fmtDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const fmtDateTime = (iso) => new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
   /** localStorage wrapper that never throws (private mode, blocked storage, etc). */
   const store = {
@@ -186,36 +233,285 @@
     },
   };
 
-  function shade(hex, amount) {
+  const emit = (name, detail) => document.dispatchEvent(new CustomEvent(name, { detail }));
+
+  // ==========================================================================
+  // Products (admin overrides for price / stock / archived are persisted)
+  // ==========================================================================
+
+  function applyOverrides() {
+    const overrides = store.get(KEYS.overrides, {});
+    PRODUCTS.forEach((p) => {
+      if (p.basePrice == null) { p.basePrice = p.price; p.baseStock = p.stock; }
+      p.price = p.basePrice;
+      p.stock = p.baseStock;
+      p.archived = false;
+      Object.assign(p, overrides[p.id] || {});
+    });
+  }
+  applyOverrides();
+
+  const Products = {
+    all: () => PRODUCTS,
+    visible: () => PRODUCTS.filter((p) => !p.archived),
+    get: (id) => PRODUCTS.find((p) => p.id === Number(id)),
+    sku: (p) => 'SL-' + String(p.id).padStart(4, '0'),
+    update(id, patch) {
+      const overrides = store.get(KEYS.overrides, {});
+      overrides[id] = Object.assign({}, overrides[id], patch);
+      store.set(KEYS.overrides, overrides);
+      applyOverrides();
+      emit('products:change');
+    },
+    resetAll() {
+      store.remove(KEYS.overrides);
+      applyOverrides();
+      emit('products:change');
+    },
+  };
+  const getProduct = Products.get;
+
+  /** Mixes a hex colour with white; amount 0..1 (1 = white). */
+  function tint(hex, amount) {
     const n = parseInt(hex.slice(1), 16);
-    const parts = [(n >> 16) + amount, ((n >> 8) & 255) + amount, (n & 255) + amount];
-    return '#' + parts.map((x) => clamp(x, 0, 255).toString(16).padStart(2, '0')).join('');
+    const mix = (c) => Math.round(c + (255 - c) * amount);
+    return '#' + [n >> 16, (n >> 8) & 255, n & 255].map((c) => mix(c).toString(16).padStart(2, '0')).join('');
   }
 
-  /** Generates an offline SVG product image (no network needed). */
+  /** Generates an offline, studio-style SVG product image (no network needed). */
   function productImage(p, variant = 0) {
-    const angle = [135, 45, 90][variant % 3];
+    const bg = tint(p.color, [0.86, 0.8, 0.9][variant % 3]);
+    const glow = tint(p.color, 0.6);
+    const size = [150, 120, 190][variant % 3];
+    const cy = [205, 210, 215][variant % 3];
     const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">' +
-      '<defs><linearGradient id="g" gradientTransform="rotate(' + angle + ' .5 .5)">' +
-      '<stop offset="0" stop-color="' + p.color + '"/><stop offset="1" stop-color="' + shade(p.color, variant === 1 ? -50 : 60) + '"/>' +
-      '</linearGradient></defs>' +
-      '<rect width="400" height="300" fill="url(#g)"/>' +
-      '<circle cx="' + (variant === 2 ? 70 : 330) + '" cy="60" r="90" fill="#fff" opacity=".14"/>' +
-      '<circle cx="' + (variant === 2 ? 340 : 60) + '" cy="260" r="60" fill="#000" opacity=".08"/>' +
-      '<text x="200" y="160" font-size="' + (variant === 2 ? 150 : 115) + '" text-anchor="middle" dominant-baseline="middle">' + p.emoji + '</text>' +
+      '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">' +
+      '<defs><radialGradient id="g" cx="50%" cy="42%" r="70%"><stop offset="0" stop-color="#fff" stop-opacity=".85"/>' +
+      '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="400" height="400" fill="' + bg + '"/>' +
+      '<rect width="400" height="400" fill="url(#g)"/>' +
+      '<ellipse cx="200" cy="' + (cy + size * 0.55) + '" rx="' + size * 0.55 + '" ry="' + size * 0.09 + '" fill="' + glow + '" opacity=".55"/>' +
+      '<text x="200" y="' + cy + '" font-size="' + size + '" text-anchor="middle" dominant-baseline="middle"' +
+      (variant === 1 ? ' transform="rotate(-12 200 ' + cy + ')"' : '') + '>' + p.emoji + '</text>' +
       '</svg>';
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
   function reviewsFor(p) {
-    const count = 2 + (p.id % 2);
+    const count = 3 + (p.id % 3);
     return Array.from({ length: count }, (_, i) => {
       const r = REVIEW_POOL[(p.id * 3 + i) % REVIEW_POOL.length];
-      const date = new Date(Date.UTC(2026, (p.id + i) % 9, 3 + i * 7)).toISOString().slice(0, 10);
+      const date = new Date(Date.UTC(2026, (p.id + i) % 9, 3 + i * 5)).toISOString().slice(0, 10);
       return Object.assign({ date }, r);
     });
   }
+
+  // ==========================================================================
+  // Auth (dummy, client-side only). auth-guard.js reads the same session key.
+  // ==========================================================================
+
+  const DEMO_PASSWORD = 'ShopLab@123';
+  const BUILTIN_USERS = {
+    standard_user: { name: 'Standard User', email: 'standard.user@shoplab.test', role: 'customer' },
+    admin_user: { name: 'Store Admin', email: 'admin@shoplab.test', role: 'admin' },
+    locked_user: { name: 'Locked User', email: 'locked@shoplab.test', role: 'customer', locked: true },
+    slow_user: { name: 'Slow User', email: 'slow@shoplab.test', role: 'customer', delay: 4000 },
+  };
+
+  const Auth = {
+    users() {
+      const registered = {};
+      store.get(KEYS.users, []).forEach((u) => { registered[u.username] = u; });
+      return Object.assign({}, registered, BUILTIN_USERS);
+    },
+    /** Returns '' on success or an error message. */
+    check(username, password) {
+      const u = this.users()[username];
+      if (!u || password !== (u.password || DEMO_PASSWORD)) return 'Username and password do not match any user in this service.';
+      if (u.locked) return 'Sorry, this user has been locked out.';
+      return '';
+    },
+    register({ name, email, username, password, dob }) {
+      const users = store.get(KEYS.users, []);
+      users.push({ name, email, username, password, dob, role: 'customer', createdAt: new Date().toISOString() });
+      store.set(KEYS.users, users);
+    },
+    session() {
+      const s = store.get(KEYS.session, null);
+      if (!s || !s.user) return null;
+      const u = this.users()[s.user] || {};
+      return Object.assign({ name: u.name || s.user, email: u.email || '', role: u.role || 'customer' }, s);
+    },
+    isAdmin() {
+      const s = this.session();
+      return Boolean(s && s.role === 'admin');
+    },
+    start(username, remember) {
+      const u = this.users()[username];
+      const session = { user: username, name: u.name, email: u.email, role: u.role || 'customer', loginAt: new Date().toISOString() };
+      store.set(KEYS.session, session);
+      if (remember) store.set(KEYS.remembered, username);
+      else store.remove(KEYS.remembered);
+      return session;
+    },
+    logout() {
+      store.remove(KEYS.session);
+      location.href = 'login.html?loggedOut=1';
+    },
+  };
+
+  /** Only allow redirects to local pages (no protocol, no //host). */
+  function safeRedirect(target) {
+    if (!target || /^[a-z][a-z0-9+.-]*:|^\/\/|\\/i.test(target)) return 'index.html';
+    return /^[\w-]+\.html([?#].*)?$/.test(target) && !/^login\.html/.test(target) ? target : 'index.html';
+  }
+
+  // ==========================================================================
+  // Cart. Lines are keyed by product + option + colour; personalised and
+  // prescription items always get their own line.
+  // ==========================================================================
+
+  const Cart = {
+    items() {
+      return store.get(KEYS.cart, [])
+        .filter((l) => l && getProduct(l.id) && l.qty > 0)
+        .map((l) => (l.key ? l : Object.assign({ key: l.id + '|' + (l.variant || '') + '|' + (l.color || '') }, l)));
+    },
+    save(items) {
+      store.set(KEYS.cart, items);
+      emit('cart:change');
+    },
+    totalFor(id, items) {
+      return (items || this.items()).filter((l) => l.id === Number(id)).reduce((s, l) => s + l.qty, 0);
+    },
+    /** Adds qty (capped at stock). Returns how many units were actually added. */
+    add(id, qty = 1, opts = {}) {
+      const p = getProduct(id);
+      if (!p || p.archived || p.stock <= 0) return 0;
+      const items = this.items();
+      const allowed = p.stock - this.totalFor(p.id, items);
+      const n = clamp(Math.floor(qty) || 1, 0, allowed);
+      if (n <= 0) return 0;
+      const variant = opts.variant || p.options[0];
+      const color = opts.color || p.colors[0].name;
+      const special = opts.custom || opts.prescription;
+      const key = p.id + '|' + variant + '|' + color + (special ? '|' + Date.now().toString(36) : '');
+      const existing = !special && items.find((l) => l.key === key);
+      if (existing) existing.qty += n;
+      else items.push({ key, id: p.id, qty: n, variant, color, custom: opts.custom || null, prescription: opts.prescription || null });
+      this.save(items);
+      return n;
+    },
+    setQty(key, qty) {
+      const items = this.items();
+      const line = items.find((l) => l.key === key);
+      if (!line) return;
+      const p = getProduct(line.id);
+      const others = this.totalFor(line.id, items) - line.qty;
+      line.qty = clamp(Math.floor(qty) || 1, 1, Math.max(1, p.stock - others));
+      this.save(items);
+    },
+    remove(key) { this.save(this.items().filter((l) => l.key !== key)); },
+    clear() { this.save([]); },
+    reorder(keys) {
+      const items = this.items();
+      this.save(keys.map((k) => items.find((l) => l.key === k)).filter(Boolean));
+    },
+    unitPrice: (line) => getProduct(line.id).price + (line.custom ? PERSONALIZATION_FEE : 0),
+    lines() {
+      return this.items().map((l) => {
+        const product = getProduct(l.id);
+        const unitPrice = this.unitPrice(l);
+        return Object.assign({}, l, { product, unitPrice, total: round2(unitPrice * l.qty) });
+      });
+    },
+    count() { return this.items().reduce((s, l) => s + l.qty, 0); },
+    subtotal() { return round2(this.lines().reduce((s, l) => s + l.total, 0)); },
+  };
+
+  /** "Option · Colour · Personalised: x.png" descriptor for a cart/order line. */
+  function lineMeta(l) {
+    const parts = [l.variant, l.color];
+    if (l.custom) parts.push('Personalised' + (l.custom.fileName ? ': ' + l.custom.fileName : '') + (l.custom.text ? ' “' + l.custom.text + '”' : ''));
+    if (l.prescription) parts.push('Prescription: ' + l.prescription.fileName);
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  // ==========================================================================
+  // Wishlist, orders, profile, misc stores
+  // ==========================================================================
+
+  const Wishlist = {
+    ids: () => store.get(KEYS.wishlist, []).filter((id) => getProduct(id)),
+    has(id) { return this.ids().includes(Number(id)); },
+    set(ids) {
+      store.set(KEYS.wishlist, ids);
+      emit('wishlist:change');
+    },
+    toggle(id) {
+      const ids = this.ids();
+      const on = !ids.includes(Number(id));
+      this.set(on ? ids.concat(Number(id)) : ids.filter((x) => x !== Number(id)));
+      return on;
+    },
+  };
+
+  const Orders = {
+    all: () => store.get(KEYS.orders, []),
+    saveAll(list) {
+      store.set(KEYS.orders, list);
+      emit('orders:change');
+    },
+    mine() {
+      const s = Auth.session();
+      return s ? this.all().filter((o) => o.user === s.user) : [];
+    },
+    get(id) { return this.all().find((o) => o.id === id) || null; },
+    add(order) { this.saveAll(this.all().concat(order)); },
+    /** Mutates one order through fn(order) and persists the list. */
+    update(id, fn) {
+      const list = this.all();
+      const o = list.find((x) => x.id === id);
+      if (!o) return null;
+      fn(o);
+      this.saveAll(list);
+      return o;
+    },
+    setStatus(o, status, note) {
+      o.status = status;
+      o.history = (o.history || []).concat({ status, at: new Date().toISOString(), note: note || '' });
+    },
+    newId() {
+      const d = new Date();
+      return 'SL-' + d.toISOString().slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(1000 + Math.random() * 9000));
+    },
+  };
+
+  const Profile = {
+    get(user) {
+      const u = Auth.users()[user] || {};
+      const last = Orders.all().filter((o) => o.user === user).slice(-1)[0];
+      return Object.assign({
+        name: u.name || user, email: u.email || '', phone: '', dob: u.dob || '', interests: [], contact: 'email', newsletter: false,
+        address: last ? last.address : null,
+      }, store.get(KEYS.profilePrefix + user, {}));
+    },
+    save(user, data) { store.set(KEYS.profilePrefix + user, Object.assign(store.get(KEYS.profilePrefix + user, {}), data)); },
+  };
+
+  const Recent = {
+    ids: () => store.get(KEYS.recent, []).filter((id) => { const p = getProduct(id); return p && !p.archived; }),
+    push(id) { store.set(KEYS.recent, [Number(id)].concat(this.ids().filter((x) => x !== Number(id))).slice(0, 8)); },
+  };
+
+  function resetDemoState() {
+    [KEYS.cart, KEYS.wishlist, KEYS.orders, KEYS.overrides, KEYS.notify, KEYS.recent, KEYS.consent].forEach((k) => store.remove(k));
+    location.reload();
+  }
+
+  // ==========================================================================
+  // Feedback helpers
+  // ==========================================================================
 
   function toast(message, type = 'info', timeout = 4000) {
     let region = $('#toast-region');
@@ -259,6 +555,15 @@
     }
   }
 
+  const statusBadge = (status, testid) => {
+    const s = ORDER_STATUS[status] || { label: status, badge: '' };
+    return '<span class="badge ' + s.badge + '" data-status="' + esc(status) + '"' + (testid ? ' data-testid="' + testid + '"' : '') + '>' + esc(s.label) + '</span>';
+  };
+
+  // ==========================================================================
+  // Downloads: CSV invoice, real PDF receipt, generic files
+  // ==========================================================================
+
   function downloadFile(filename, content, mime) {
     const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -270,16 +575,14 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
-    document.dispatchEvent(new CustomEvent('shoplab:download', { detail: { filename } }));
+    emit('shoplab:download', { filename });
   }
 
   /** Builds a minimal, valid single-page PDF from plain text lines (ASCII only). */
   function buildPdf(lines) {
     const ascii = (s) => String(s).replace(/[^\x20-\x7E]/g, '?').replace(/[\\()]/g, '\\$&');
     let stream = 'BT /F1 12 Tf 56 760 Td 18 TL\n';
-    lines.forEach((line, i) => {
-      stream += (i ? 'T* ' : '') + '(' + ascii(line) + ') Tj\n';
-    });
+    lines.forEach((line, i) => { stream += (i ? 'T* ' : '') + '(' + ascii(line) + ') Tj\n'; });
     stream += 'ET';
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
@@ -302,208 +605,134 @@
   }
 
   function invoiceCsv(order) {
-    const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+    const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const t = order.totals;
     const rows = [
-      ['Invoice', order.id], ['Date', order.date], ['Customer', order.customer.name], ['Email', order.customer.email], [],
-      ['SKU', 'Product', 'Qty', 'Unit Price', 'Line Total'],
+      ['Invoice', order.id], ['Date', fmtDate(order.date)], ['Customer', order.customer.name], ['Email', order.customer.email],
+      ['Status', (ORDER_STATUS[order.status] || {}).label || order.status], [],
+      ['SKU', 'Product', 'Options', 'Qty', 'Unit Price', 'Line Total'],
     ];
-    order.items.forEach((i) => rows.push(['SL-' + String(i.id).padStart(4, '0'), i.name, i.qty, i.price.toFixed(2), (i.price * i.qty).toFixed(2)]));
-    rows.push([], ['', '', '', 'Subtotal', t.subtotal.toFixed(2)], ['', '', '', 'Discount', (-t.discount).toFixed(2)],
-      ['', '', '', 'Shipping', t.shipping.toFixed(2)], ['', '', '', 'Tax', t.tax.toFixed(2)], ['', '', '', 'Total', t.total.toFixed(2)]);
+    order.items.forEach((i) => rows.push(['SL-' + String(i.id).padStart(4, '0'), i.name, lineMeta(i), i.qty, i.unitPrice.toFixed(2), (i.unitPrice * i.qty).toFixed(2)]));
+    rows.push([], ['', '', '', '', 'Subtotal', t.subtotal.toFixed(2)], ['', '', '', '', 'Discount', (-t.discount).toFixed(2)],
+      ['', '', '', '', 'Shipping', t.shipping.toFixed(2)], ['', '', '', '', 'Tax', t.tax.toFixed(2)], ['', '', '', '', 'Total', t.total.toFixed(2)]);
     return rows.map((r) => r.map(q).join(',')).join('\r\n');
   }
 
   function receiptPdf(order) {
     const t = order.totals;
     const lines = [
-      'ShopLab - Payment Receipt', '', 'Order: ' + order.id, 'Date: ' + order.date,
-      'Customer: ' + order.customer.name + ' <' + order.customer.email + '>', '', 'Items:',
+      'ShopLab - Payment Receipt', '', 'Order: ' + order.id, 'Date: ' + fmtDate(order.date),
+      'Customer: ' + order.customer.name + ' <' + order.customer.email + '>',
+      'Ship to: ' + [order.address.line1, order.address.city, order.address.postalCode, order.address.country].join(', '), '', 'Items:',
     ];
-    order.items.forEach((i) => lines.push('  ' + i.qty + ' x ' + i.name + '   ' + money(i.price * i.qty)));
+    order.items.forEach((i) => lines.push('  ' + i.qty + ' x ' + i.name + ' (' + lineMeta(i) + ')   ' + money(i.unitPrice * i.qty)));
     lines.push('', 'Subtotal: ' + money(t.subtotal), 'Discount: -' + money(t.discount), 'Shipping: ' + money(t.shipping),
-      'Tax: ' + money(t.tax), 'TOTAL: ' + money(t.total), '', 'Thank you for testing with ShopLab!');
+      'Tax: ' + money(t.tax), 'TOTAL: ' + money(t.total), '', 'Thank you for shopping with ShopLab!');
     return buildPdf(lines);
   }
 
-  function sampleOrder() {
-    const orders = store.get(KEYS.orders, []);
-    if (orders.length) return orders[orders.length - 1];
-    const items = [1, 4, 10].map((id, i) => {
-      const p = getProduct(id);
-      return { id: p.id, name: p.name, qty: i + 1, price: p.price };
-    });
-    const subtotal = round2(items.reduce((s, i) => s + i.price * i.qty, 0));
-    const tax = round2(subtotal * TAX_RATE);
-    return {
-      id: 'SL-SAMPLE-0001', date: today(), customer: { name: 'Sample Customer', email: 'sample@shoplab.test' }, items,
-      totals: { subtotal, discount: 0, shipping: 0, tax, total: round2(subtotal + tax) },
-    };
-  }
+  function downloadInvoice(order) { downloadFile('invoice-' + order.id + '.csv', invoiceCsv(order), 'text/csv;charset=utf-8'); }
+  function downloadReceipt(order) { downloadFile('receipt-' + order.id + '.pdf', receiptPdf(order), 'application/pdf'); }
 
   // ==========================================================================
-  // Cart (persisted in localStorage; array order = display order)
+  // Input formatting / validation helpers (checkout, profile, gateway)
   // ==========================================================================
 
-  const Cart = {
-    items() {
-      return store.get(KEYS.cart, []).filter((i) => getProduct(i.id) && i.qty > 0);
-    },
-    save(items) {
-      store.set(KEYS.cart, items);
-      updateCartBadge(true);
-      document.dispatchEvent(new CustomEvent('cart:change'));
-    },
-    /** Adds qty (capped at stock). Returns how many units were actually added. */
-    add(id, qty = 1) {
-      const p = getProduct(id);
-      if (!p || p.stock <= 0) return 0;
-      const items = this.items();
-      const existing = items.find((i) => i.id === p.id);
-      const current = existing ? existing.qty : 0;
-      const next = clamp(current + qty, 1, p.stock);
-      if (existing) existing.qty = next;
-      else items.push({ id: p.id, qty: next });
-      this.save(items);
-      return next - current;
-    },
-    setQty(id, qty) {
-      const p = getProduct(id);
-      const items = this.items();
-      const item = items.find((i) => i.id === Number(id));
-      if (!p || !item) return;
-      item.qty = clamp(Math.floor(qty) || 1, 1, p.stock);
-      this.save(items);
-    },
-    remove(id) { this.save(this.items().filter((i) => i.id !== Number(id))); },
-    clear() { this.save([]); },
-    reorder(ids) {
-      const items = this.items();
-      this.save(ids.map((id) => items.find((i) => i.id === id)).filter(Boolean));
-    },
-    count() { return this.items().reduce((s, i) => s + i.qty, 0); },
-    lines() { return this.items().map((i) => ({ id: i.id, qty: i.qty, product: getProduct(i.id) })); },
+  const formatCardNumber = (v) => v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
+  const formatExpiry = (v) => {
+    const d = v.replace(/\D/g, '').slice(0, 4);
+    return d.length >= 3 ? d.slice(0, 2) + '/' + d.slice(2) : d;
   };
-
-  // ==========================================================================
-  // Auth (dummy, client-side only). auth-guard.js reads the same key.
-  // ==========================================================================
-
-  const SESSION_KEY = 'shoplab.session';
-  const DEMO_PASSWORD = 'ShopLab@123';
-  const USERS = {
-    standard_user: { name: 'Standard User' },
-    locked_user: { name: 'Locked User', locked: true },
-    slow_user: { name: 'Slow User', delay: 4000 },
+  const formatPhone = (v) => {
+    const d = v.replace(/\D/g, '').slice(0, 10);
+    if (d.length <= 3) return d.length ? '(' + d : '';
+    if (d.length <= 6) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
+    return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
   };
-
-  const REMEMBER_KEY = 'shoplab.rememberedUser';
-
-  // The session lives in localStorage so it is shared with new tabs/windows,
-  // like a cookie would be. "Remember me" only pre-fills the username.
-  const Auth = {
-    session() {
-      const v = store.get(SESSION_KEY, null);
-      return v && v.user ? v : null;
-    },
-    /** Returns '' on success or an error message. */
-    check(username, password) {
-      const u = USERS[username];
-      if (!u || password !== DEMO_PASSWORD) return 'Username and password do not match any user in this service.';
-      if (u.locked) return 'Sorry, this user has been locked out.';
-      return '';
-    },
-    start(username, remember) {
-      const session = { user: username, name: USERS[username].name, loginAt: new Date().toISOString() };
-      store.set(SESSION_KEY, session);
-      if (remember) store.set(REMEMBER_KEY, username);
-      else store.remove(REMEMBER_KEY);
-      return session;
-    },
-    clear() { store.remove(SESSION_KEY); },
-    logout() {
-      this.clear();
-      location.href = 'login.html?loggedOut=1';
-    },
-  };
-
-  /** Only allow redirects to local pages (no protocol, no //host). */
-  function safeRedirect(target) {
-    if (!target || /^[a-z][a-z0-9+.-]*:|^\/\/|\\/i.test(target)) return 'index.html';
-    return /^[\w-]+\.html([?#].*)?$/.test(target) && !/^login\.html/.test(target) ? target : 'index.html';
+  function cardBrand(digits) {
+    if (/^4/.test(digits)) return 'VISA';
+    if (/^(5[1-5]|2[2-7])/.test(digits)) return 'MASTERCARD';
+    if (/^3[47]/.test(digits)) return 'AMEX';
+    if (/^6(011|5)/.test(digits)) return 'DISCOVER';
+    return 'CARD';
   }
-
-  function updateCartBadge(bump) {
-    $$('[data-testid="header-cart-count"]').forEach((el) => {
-      el.textContent = String(Cart.count());
-      if (bump) {
-        el.classList.remove('bump');
-        void el.offsetWidth; // restart the animation
-        el.classList.add('bump');
-      }
-    });
+  function luhn(digits) {
+    let sum = 0;
+    let dbl = false;
+    for (let i = digits.length - 1; i >= 0; i--) {
+      let d = Number(digits[i]);
+      if (dbl) { d *= 2; if (d > 9) d -= 9; }
+      sum += d;
+      dbl = !dbl;
+    }
+    return sum % 10 === 0;
   }
-
-  function resetDemoState() {
-    Object.values(KEYS).forEach((k) => store.remove(k));
-    location.reload();
+  function expiryError(v) {
+    const m = /^(\d{2})\/(\d{2})$/.exec(v);
+    if (!m) return 'Enter expiry as MM/YY.';
+    const month = Number(m[1]);
+    const year = 2000 + Number(m[2]);
+    if (month < 1 || month > 12) return 'Month must be between 01 and 12.';
+    const now = new Date();
+    if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) return 'This card has expired.';
+    return '';
   }
 
   // ==========================================================================
   // Reusable widgets
   // ==========================================================================
 
+  /** Shared drag state so sortable lists and drop zones can cooperate. */
+  const drag = { el: null, moved: false, lists: null };
+
   /**
-   * HTML5 drag-and-drop sortable lists. Items must have draggable="true" and
+   * HTML5 drag-and-drop sortable lists. Items need draggable="true" and
    * data-id. Lists passed together can exchange items. onChange runs once
    * after a drag that changed the DOM order.
    */
   function makeSortable(lists, onChange) {
-    let dragged = null;
-    let moved = false;
-
     function itemAfter(list, y) {
-      const items = $$(':scope > [draggable="true"]', list).filter((el) => el !== dragged);
+      const items = $$(':scope > [draggable="true"]', list).filter((el) => el !== drag.el);
       return items.find((el) => {
         const r = el.getBoundingClientRect();
         return y < r.top + r.height / 2;
       }) || null;
     }
-
     function finish() {
-      if (!dragged) return;
-      dragged.classList.remove('is-dragging');
+      if (!drag.el) return;
+      drag.el.classList.remove('is-dragging');
       lists.forEach((l) => l.classList.remove('is-drop-target'));
-      dragged = null;
+      const moved = drag.moved;
+      drag.el = null;
+      drag.moved = false;
       if (moved) onChange();
-      moved = false;
     }
-
     lists.forEach((list) => {
       list.addEventListener('dragstart', (e) => {
         const item = e.target.closest && e.target.closest('[draggable="true"]');
         if (!item || item.parentElement !== list) return;
-        dragged = item;
-        moved = false;
+        drag.el = item;
+        drag.moved = false;
+        drag.lists = lists;
         e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', item.dataset.id); } catch (_) { /* IE-style */ }
+        try { e.dataTransfer.setData('text/plain', item.dataset.id); } catch (_) { /* ignore */ }
         requestAnimationFrame(() => item.classList.add('is-dragging'));
       });
       list.addEventListener('dragover', (e) => {
-        if (!dragged) return;
+        if (!drag.el || drag.lists !== lists) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         lists.forEach((l) => l.classList.toggle('is-drop-target', l === list));
         const after = itemAfter(list, e.clientY);
         if (after) {
-          if (dragged.nextElementSibling !== after) { list.insertBefore(dragged, after); moved = true; }
-        } else if (list.lastElementChild !== dragged) {
-          list.appendChild(dragged);
-          moved = true;
+          if (drag.el.nextElementSibling !== after) { list.insertBefore(drag.el, after); drag.moved = true; }
+        } else if (list.lastElementChild !== drag.el) {
+          list.appendChild(drag.el);
+          drag.moved = true;
         }
       });
       list.addEventListener('drop', (e) => {
-        if (!dragged) return;
+        if (!drag.el) return;
         e.preventDefault();
         finish();
       });
@@ -511,15 +740,37 @@
     });
   }
 
+  /** A drop target that accepts an item being dragged from a sortable list. */
+  function makeDropZone(zone, onDrop) {
+    zone.addEventListener('dragover', (e) => {
+      if (!drag.el) return;
+      e.preventDefault();
+      zone.classList.add('is-drop-target');
+    });
+    zone.addEventListener('dragleave', (e) => { if (!zone.contains(e.relatedTarget)) zone.classList.remove('is-drop-target'); });
+    zone.addEventListener('drop', (e) => {
+      if (!drag.el) return;
+      e.preventDefault();
+      zone.classList.remove('is-drop-target');
+      const id = drag.el.dataset.id;
+      drag.el.classList.remove('is-dragging');
+      drag.el = null;
+      drag.moved = false;
+      onDrop(id);
+    });
+  }
+
   /**
-   * Accessible combobox (ARIA 1.2 pattern): type to filter, ↑/↓ to move,
-   * Enter to select, Escape to close, or click an option.
-   * options: [{ value, label, meta? }]
+   * Accessible combobox (ARIA 1.2): type to filter, ↑/↓ to move, Enter to
+   * select, Escape to close, or click an option.
+   * options: [{ value, label, meta?, icon?, keywords? }] or a function returning them.
+   * onEnterFreeText(text) runs on Enter when no option is active.
    */
-  function createCombobox({ input, listbox, toggle, hidden, options, onSelect, testid }) {
+  function createCombobox({ input, listbox, toggle, hidden, options, onSelect, onEnterFreeText, testid, minChars = 0, limit = 50 }) {
     let shown = [];
     let active = -1;
     let selected = null;
+    const getOptions = () => (typeof options === 'function' ? options() : options);
 
     const highlight = (label, q) => {
       if (!q) return esc(label);
@@ -531,7 +782,7 @@
     function render() {
       const q = input.value.trim().toLowerCase();
       const showAll = !q || (selected && input.value === selected.label);
-      shown = showAll ? options.slice() : options.filter((o) => o.label.toLowerCase().includes(q));
+      shown = (showAll ? getOptions() : getOptions().filter((o) => (o.label + ' ' + (o.keywords || '')).toLowerCase().includes(q))).slice(0, limit);
       active = -1;
       input.removeAttribute('aria-activedescendant');
       if (!shown.length) {
@@ -541,24 +792,23 @@
       listbox.innerHTML = shown.map((o, i) =>
         '<li role="option" id="' + listbox.id + '-opt-' + i + '" data-index="' + i + '" data-value="' + esc(o.value) + '"' +
         ' data-testid="' + testid + '-option" aria-selected="' + Boolean(selected && selected.value === o.value) + '">' +
-        '<span>' + highlight(o.label, showAll ? '' : q) + '</span>' +
+        '<span class="opt-label">' + (o.icon ? '<span class="opt-icon" aria-hidden="true">' + o.icon + '</span>' : '') + '<span>' + highlight(o.label, showAll ? '' : q) + '</span></span>' +
         (o.meta ? '<span class="muted small">' + esc(o.meta) + '</span>' : '') + '</li>'
       ).join('');
     }
 
     function open() {
+      if (input.value.trim().length < minChars) { close(); return; }
       render();
       listbox.hidden = false;
       input.setAttribute('aria-expanded', 'true');
     }
-
     function close() {
       listbox.hidden = true;
       input.setAttribute('aria-expanded', 'false');
       input.removeAttribute('aria-activedescendant');
       active = -1;
     }
-
     function setActive(i) {
       const items = $$('[role="option"]', listbox);
       if (!items.length) return;
@@ -567,7 +817,6 @@
       input.setAttribute('aria-activedescendant', items[active].id);
       items[active].scrollIntoView({ block: 'nearest' });
     }
-
     function choose(i) {
       const o = shown[i];
       if (!o) return;
@@ -602,11 +851,9 @@
           setActive(active - 1);
           break;
         case 'Enter':
-          if (isOpen) {
-            e.preventDefault();
-            if (active >= 0) choose(active);
-            else if (shown.length === 1) choose(0);
-          }
+          if (isOpen && active >= 0) { e.preventDefault(); choose(active); }
+          else if (onEnterFreeText) { e.preventDefault(); close(); onEnterFreeText(input.value.trim()); }
+          else if (isOpen) { e.preventDefault(); if (shown.length === 1) choose(0); }
           break;
         case 'Escape':
           if (isOpen) { e.preventDefault(); close(); }
@@ -633,1031 +880,73 @@
 
     return {
       get selected() { return selected; },
+      select(value) {
+        const o = getOptions().find((x) => x.value === value);
+        if (!o) return;
+        selected = o;
+        input.value = o.label;
+        if (hidden) hidden.value = o.value;
+        if (onSelect) onSelect(o);
+      },
       clear() { selected = null; input.value = ''; if (hidden) hidden.value = ''; close(); },
     };
   }
 
-  // ==========================================================================
-  // Shell (header, footer, cross-tab sync)
-  // ==========================================================================
-
-  function initShell() {
-    updateCartBadge(false);
-
-    const toggle = $('#menu-toggle');
-    const nav = $('#main-nav');
-    if (toggle && nav) {
-      toggle.addEventListener('click', () => {
-        const open = nav.classList.toggle('is-open');
-        toggle.setAttribute('aria-expanded', String(open));
-      });
-    }
-
-    $$('[data-testid="footer-reset-state"]').forEach((b) => b.addEventListener('click', resetDemoState));
-
-    const session = Auth.session();
-    if (nav && session) {
-      const user = document.createElement('span');
-      user.className = 'user-chip';
-      user.id = 'header-username';
-      user.dataset.testid = 'header-username';
-      user.title = 'Signed in as ' + session.user;
-      user.textContent = '👤 ' + session.user;
-      const logout = document.createElement('button');
-      logout.type = 'button';
-      logout.className = 'btn btn-sm';
-      logout.id = 'logout-btn';
-      logout.dataset.testid = 'header-logout-btn';
-      logout.setAttribute('aria-label', 'Log out');
-      logout.textContent = 'Log out';
-      logout.addEventListener('click', () => Auth.logout());
-      nav.append(user, logout);
-    }
-
-    // Keep tabs in sync (e.g. a cart change in a target="_blank" tab).
-    window.addEventListener('storage', (e) => {
-      if (e.key === SESSION_KEY && document.body.dataset.page !== 'login' && !Auth.session()) {
-        location.replace('login.html?loggedOut=1');
-        return;
-      }
-      if (e.key === KEYS.cart || e.key === null) {
-        updateCartBadge(false);
-        document.dispatchEvent(new CustomEvent('cart:change'));
-      }
-    });
-  }
-
-  // ==========================================================================
-  // Page: Catalog (index.html)
-  // ==========================================================================
-
-  function initCatalog() {
-    const form = $('#filters-form');
-    const grid = $('#product-grid');
-    const countEl = $('#results-count');
-    const search = $('#search-input');
-    const category = $('#category-filter');
-    const range = $('#price-range');
-    const rangeOut = $('#price-range-value');
-    const inStock = $('#in-stock-only');
-    const sort = $('#sort-select');
-    const pendingQty = {};
-
-    // Deep links for tests: index.html?q=shoes&category=sports
-    if (param('q')) search.value = param('q');
-    if (param('category') && CATEGORY_LABELS[param('category')]) category.value = param('category');
-
-    function filtered() {
-      const q = search.value.trim().toLowerCase();
-      const tags = $$('input[name="tags"]:checked', form).map((i) => i.value);
-      const max = Number(range.value);
-      const list = PRODUCTS.filter((p) =>
-        (!q || [p.name, p.vendor, p.short, CATEGORY_LABELS[p.category]].concat(p.tags).join(' ').toLowerCase().includes(q)) &&
-        (category.value === 'all' || p.category === category.value) &&
-        (!tags.length || tags.some((t) => p.tags.includes(t))) &&
-        p.price <= max &&
-        (!inStock.checked || p.stock > 0));
-      const sorters = {
-        'price-asc': (a, b) => a.price - b.price,
-        'price-desc': (a, b) => b.price - a.price,
-        'rating-desc': (a, b) => b.rating - a.rating,
-        'name-asc': (a, b) => a.name.localeCompare(b.name),
-      };
-      return sorters[sort.value] ? list.sort(sorters[sort.value]) : list;
-    }
-
-    function cardHtml(p) {
-      const qty = pendingQty[p.id] || 1;
-      const out = p.stock <= 0;
-      const badge = p.tags.includes('sale') ? '<span class="badge badge-sale" data-testid="product-badge">Sale</span>'
-        : p.tags.includes('new') ? '<span class="badge badge-new" data-testid="product-badge">New</span>' : '';
-      const stockNote = out ? '<p class="stock-note out" data-testid="product-stock-status">Out of stock</p>'
-        : p.stock <= 5 ? '<p class="stock-note low" data-testid="product-stock-status">Only ' + p.stock + ' left</p>'
-        : '<p class="stock-note muted" data-testid="product-stock-status">In stock</p>';
-      return (
-        '<article class="product-card' + (out ? ' is-out-of-stock' : '') + '" id="product-card-' + p.id + '" data-testid="product-card" data-product-id="' + p.id + '" aria-labelledby="product-title-' + p.id + '">' +
-          '<a href="product-detail.html?id=' + p.id + '" class="product-media" data-testid="product-image-link" tabindex="-1" aria-hidden="true">' +
-            '<img src="' + productImage(p) + '" alt="' + esc(p.name) + '" data-testid="product-image" loading="lazy" width="400" height="300">' + badge +
-          '</a>' +
-          '<div class="product-body">' +
-            '<p class="product-category" data-testid="product-category">' + esc(CATEGORY_LABELS[p.category]) + '</p>' +
-            '<h3 class="product-title" id="product-title-' + p.id + '"><a href="product-detail.html?id=' + p.id + '" data-testid="product-title-link" id="product-link-' + p.id + '">' + esc(p.name) + '</a></h3>' +
-            '<div class="rating" aria-label="Rated ' + p.rating + ' out of 5" data-testid="product-rating">' + stars(p.rating) + '<span>' + p.rating.toFixed(1) + '</span></div>' +
-            '<div class="price-row"><p class="price" data-testid="product-price">' + money(p.price) + '</p>' +
-              (p.compareAt ? '<span class="compare-price" data-testid="product-compare-price">' + money(p.compareAt) + '</span>' : '') + '</div>' +
-            stockNote +
-            '<div class="tag-list" data-testid="product-tags">' + p.tags.map((t) => '<span class="badge" data-testid="product-tag">' + t + '</span>').join('') + '</div>' +
-            '<div class="card-actions">' +
-              '<div class="qty" role="group" aria-label="Quantity for ' + esc(p.name) + '" data-testid="product-qty">' +
-                '<button type="button" data-action="dec" id="qty-dec-' + p.id + '" data-testid="product-qty-decrement" aria-label="Decrease quantity for ' + esc(p.name) + '"' + (out || qty <= 1 ? ' disabled' : '') + '>−</button>' +
-                '<input type="number" id="qty-' + p.id + '" name="qty-' + p.id + '" value="' + qty + '" min="1" max="' + Math.max(1, p.stock) + '" data-testid="product-qty-input" aria-label="Quantity for ' + esc(p.name) + '"' + (out ? ' disabled' : '') + '>' +
-                '<button type="button" data-action="inc" id="qty-inc-' + p.id + '" data-testid="product-qty-increment" aria-label="Increase quantity for ' + esc(p.name) + '"' + (out || qty >= p.stock ? ' disabled' : '') + '>+</button>' +
-              '</div>' +
-              '<button type="button" class="btn btn-primary" data-action="add" id="add-to-cart-' + p.id + '" data-testid="product-add-to-cart" aria-label="Add ' + esc(p.name) + ' to cart"' + (out ? ' disabled' : '') + '>' + (out ? 'Out of Stock' : 'Add to Cart') + '</button>' +
-            '</div>' +
-            '<div class="card-links">' +
-              '<a href="product-detail.html?id=' + p.id + '&tab=reviews" target="_blank" rel="noopener" id="reviews-link-' + p.id + '" data-testid="product-reviews-link" aria-label="Read reviews for ' + esc(p.name) + ' (opens in new tab)">Read Reviews ↗</a>' +
-              '<a href="product-detail.html?id=' + p.id + '&tab=terms" target="_blank" rel="noopener" id="terms-link-' + p.id + '" data-testid="product-vendor-terms-link" aria-label="Vendor terms for ' + esc(p.name) + ' (opens in new tab)">Vendor Terms ↗</a>' +
-            '</div>' +
-          '</div>' +
-        '</article>'
-      );
-    }
-
-    function render() {
-      rangeOut.textContent = '$' + range.value;
-      range.setAttribute('aria-valuetext', '$' + range.value);
-      const list = filtered();
-      countEl.textContent = 'Showing ' + list.length + ' of ' + PRODUCTS.length + ' products';
-      if (!list.length) {
-        grid.dataset.state = 'empty';
-        grid.innerHTML =
-          '<div class="empty-state" data-testid="catalog-empty-state" style="grid-column:1/-1">' +
-          '<span class="emoji" aria-hidden="true">🔎</span><strong>No products match your filters.</strong>' +
-          '<button type="button" class="btn btn-sm" id="empty-reset" data-testid="catalog-empty-reset">Clear filters</button></div>';
-        return;
-      }
-      grid.dataset.state = 'ready';
-      grid.innerHTML = list.map(cardHtml).join('');
-    }
-
-    function syncQtyControls(card, p) {
-      const qty = pendingQty[p.id] || 1;
-      $('[data-testid="product-qty-input"]', card).value = qty;
-      $('[data-action="dec"]', card).disabled = qty <= 1;
-      $('[data-action="inc"]', card).disabled = qty >= p.stock;
-    }
-
-    // Reset synchronously so the grid is already re-rendered when the click returns.
-    function resetFilters() {
-      form.reset();
-      render();
-    }
-
-    form.addEventListener('input', render);
-    form.addEventListener('change', render);
-    form.addEventListener('submit', (e) => e.preventDefault());
-    $('#reset-filters').addEventListener('click', resetFilters);
-    sort.addEventListener('change', render);
-
-    grid.addEventListener('click', async (e) => {
-      if (e.target.closest('#empty-reset')) { resetFilters(); return; }
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const card = btn.closest('[data-testid="product-card"]');
-      const p = getProduct(card.dataset.productId);
-      const action = btn.dataset.action;
-
-      if (action === 'inc' || action === 'dec') {
-        pendingQty[p.id] = clamp((pendingQty[p.id] || 1) + (action === 'inc' ? 1 : -1), 1, p.stock);
-        syncQtyControls(card, p);
-        return;
-      }
-
-      if (action === 'add') {
-        const qty = pendingQty[p.id] || 1;
-        setBusy(btn, true, 'Adding…');
-        await wait(500);
-        const added = Cart.add(p.id, qty);
-        setBusy(btn, false);
-        if (added > 0) {
-          btn.classList.add('is-added');
-          btn.textContent = '✓ Added';
-          btn.dataset.state = 'added';
-          toast('Added ' + added + ' × ' + p.name + ' to cart', 'success');
-          pendingQty[p.id] = 1;
-          syncQtyControls(card, p);
-          setTimeout(() => {
-            btn.classList.remove('is-added');
-            btn.textContent = 'Add to Cart';
-            delete btn.dataset.state;
-          }, 1500);
-        } else {
-          toast('You already have the maximum available stock (' + p.stock + ') of ' + p.name + ' in your cart.', 'error');
-        }
-      }
-    });
-
-    grid.addEventListener('change', (e) => {
-      const input = e.target.closest('[data-testid="product-qty-input"]');
-      if (!input) return;
-      const card = input.closest('[data-testid="product-card"]');
-      const p = getProduct(card.dataset.productId);
-      pendingQty[p.id] = clamp(Math.floor(Number(input.value)) || 1, 1, p.stock);
-      syncQtyControls(card, p);
-    });
-
-    // Simulated network latency so tests have to wait for the grid.
-    setTimeout(() => {
-      grid.removeAttribute('aria-busy');
-      render();
-    }, 600);
-  }
-
-  // ==========================================================================
-  // Page: Product detail
-  // ==========================================================================
-
-  function initProductDetail() {
-    const p = getProduct(param('id'));
-    if (!p) {
-      $('#pdp-not-found').hidden = false;
-      document.title = 'ShopLab — Product not found';
-      return;
-    }
-    $('#pdp-content').hidden = false;
-    document.title = 'ShopLab — ' + p.name;
-
-    const out = p.stock <= 0;
-    const reviews = reviewsFor(p);
-
-    // ---- Static content
-    $('#pdp-breadcrumb-category').innerHTML = '<a href="index.html?category=' + p.category + '">' + esc(CATEGORY_LABELS[p.category]) + '</a>';
-    $('#pdp-breadcrumb-current').textContent = p.name;
-    $('#pdp-category').textContent = CATEGORY_LABELS[p.category];
-    $('#pdp-title').textContent = p.name;
-    $('#pdp-vendor').textContent = p.vendor;
-    $('#pdp-rating').innerHTML = stars(p.rating) + '<span>' + p.rating.toFixed(1) + ' / 5</span>';
-    $('#pdp-rating').setAttribute('aria-label', 'Rated ' + p.rating + ' out of 5');
-    $('#pdp-price').textContent = money(p.price);
-    $('#pdp-compare-price').textContent = p.compareAt ? money(p.compareAt) : '';
-    const stockEl = $('#pdp-stock');
-    stockEl.textContent = out ? 'Out of stock' : p.stock <= 5 ? 'Only ' + p.stock + ' left in stock' : 'In stock (' + p.stock + ' available)';
-    stockEl.className = 'stock-note ' + (out ? 'out' : p.stock <= 5 ? 'low' : 'muted');
-    stockEl.dataset.stock = String(p.stock);
-    $('#pdp-short-description').textContent = p.short;
-    $('#pdp-description').textContent =
-      p.short + ' Designed by ' + p.vendor + ' and backed by our 30-day satisfaction guarantee. ' +
-      'This is placeholder copy for automation practice: assert on it, scroll to it, or ignore it entirely.';
-    $('#pdp-features').innerHTML = p.features.map((f) => '<li data-testid="pdp-feature">' + esc(f) + '</li>').join('');
-
-    // ---- Gallery
-    const mainImg = $('#pdp-main-image');
-    mainImg.src = productImage(p, 0);
-    mainImg.alt = p.name;
-    const thumbs = $('#pdp-thumbs');
-    thumbs.innerHTML = [0, 1, 2].map((i) =>
-      '<button type="button" id="pdp-thumb-' + i + '" data-index="' + i + '" data-testid="pdp-thumbnail" aria-pressed="' + (i === 0) + '" aria-label="Show image ' + (i + 1) + ' of 3">' +
-      '<img src="' + productImage(p, i) + '" alt=""></button>').join('');
-    thumbs.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-index]');
-      if (!btn) return;
-      mainImg.src = productImage(p, Number(btn.dataset.index));
-      mainImg.dataset.index = btn.dataset.index;
-      $$('button', thumbs).forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
-    });
-
-    // ---- Options
-    const variant = $('#pdp-variant');
-    p.options.forEach((o) => variant.add(new Option(o, o)));
-    $('#pdp-colors').innerHTML = p.colors.map((c, i) =>
-      '<label class="swatch" for="pdp-color-' + i + '">' +
-      '<input type="radio" name="color" id="pdp-color-' + i + '" value="' + esc(c.name) + '" data-testid="pdp-color-option"' + (i === 0 ? ' checked' : '') + '>' +
-      '<span class="swatch-dot" style="background:' + c.hex + '"></span>' + esc(c.name) + '</label>').join('');
-
-    // ---- Quantity
-    const qtyInput = $('#pdp-qty-input');
-    const dec = $('#pdp-qty-decrement');
-    const inc = $('#pdp-qty-increment');
-    qtyInput.max = String(Math.max(1, p.stock));
-    function setQty(n) {
-      const q = clamp(Math.floor(n) || 1, 1, Math.max(1, p.stock));
-      qtyInput.value = q;
-      dec.disabled = out || q <= 1;
-      inc.disabled = out || q >= p.stock;
-    }
-    dec.addEventListener('click', () => setQty(Number(qtyInput.value) - 1));
-    inc.addEventListener('click', () => setQty(Number(qtyInput.value) + 1));
-    qtyInput.addEventListener('change', () => setQty(Number(qtyInput.value)));
-    setQty(1);
-
-    // ---- Add to cart
-    const addBtn = $('#pdp-add-to-cart');
-    const addSuccess = $('#pdp-add-success');
-    const variantError = $('#pdp-variant-error');
-    if (out) {
-      addBtn.disabled = true;
-      addBtn.textContent = 'Out of Stock';
-      qtyInput.disabled = true;
-      variant.disabled = true;
-    }
-    variant.addEventListener('change', () => {
-      if (variant.value) { variantError.textContent = ''; variant.setAttribute('aria-invalid', 'false'); }
-    });
-    $('#pdp-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      addSuccess.hidden = true;
-      if (!variant.value) {
-        variantError.textContent = 'Please select an option.';
-        variant.setAttribute('aria-invalid', 'true');
-        variant.focus();
-        return;
-      }
-      setBusy(addBtn, true, 'Adding…');
-      await wait(600);
-      const added = Cart.add(p.id, Number(qtyInput.value));
-      setBusy(addBtn, false);
-      if (added > 0) {
-        const color = ($('input[name="color"]:checked') || {}).value;
-        addSuccess.className = 'alert alert-success';
-        addSuccess.textContent = 'Added ' + added + ' × ' + p.name + ' (' + variant.value + (color ? ', ' + color : '') + ') to your cart.';
-        toast('Added to cart', 'success');
-      } else {
-        addSuccess.className = 'alert alert-warning';
-        addSuccess.textContent = 'You already have all ' + p.stock + ' available units in your cart.';
-      }
-      addSuccess.hidden = false;
-      setQty(1);
-    });
-
-    // ---- Wishlist toggle (shared with playground drag-and-drop)
-    const wishBtn = $('#pdp-wishlist-toggle');
-    function syncWish() {
-      const on = store.get(KEYS.wishlist, []).includes(p.id);
-      wishBtn.setAttribute('aria-pressed', String(on));
-      wishBtn.textContent = on ? '♥ Wishlisted' : '♡ Wishlist';
-      wishBtn.setAttribute('aria-label', on ? 'Remove from wishlist' : 'Add to wishlist');
-    }
-    wishBtn.addEventListener('click', () => {
-      const list = store.get(KEYS.wishlist, []);
-      const on = list.includes(p.id);
-      store.set(KEYS.wishlist, on ? list.filter((id) => id !== p.id) : list.concat(p.id));
-      syncWish();
-      toast(on ? 'Removed from wishlist' : 'Added to wishlist', 'info');
-    });
-    syncWish();
-
-    // ---- Tabs (keyboard: ←/→/Home/End)
-    const tabs = $$('[role="tab"]');
-    function selectTab(name, focus) {
-      tabs.forEach((t) => {
-        const on = t.dataset.tab === name;
-        t.setAttribute('aria-selected', String(on));
-        t.tabIndex = on ? 0 : -1;
-        $('#' + t.getAttribute('aria-controls')).hidden = !on;
-        if (on && focus) t.focus();
-      });
-    }
-    tabs.forEach((t, i) => {
-      t.addEventListener('click', () => {
-        selectTab(t.dataset.tab);
-        history.replaceState(null, '', '?id=' + p.id + '&tab=' + t.dataset.tab);
-      });
-      t.addEventListener('keydown', (e) => {
-        const map = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: tabs.length - 1 };
-        if (!(e.key in map)) return;
-        e.preventDefault();
-        const next = tabs[(map[e.key] + tabs.length) % tabs.length];
-        selectTab(next.dataset.tab, true);
-      });
-    });
-    const initialTab = param('tab');
-    selectTab(['description', 'reviews', 'terms'].includes(initialTab) ? initialTab : 'description');
-    if (initialTab) requestAnimationFrame(() => $('.tabs').scrollIntoView());
-
-    // ---- Reviews
-    function renderReviews() {
-      $('#pdp-review-count').textContent = String(reviews.length);
-      $('#pdp-reviews').innerHTML = reviews.map((r, i) =>
-        '<article class="review" data-testid="review-item" id="review-' + i + '">' +
-          '<div class="review-head"><strong data-testid="review-author">' + esc(r.author) + '</strong>' +
-          '<span class="rating" aria-label="' + r.rating + ' out of 5 stars" data-testid="review-stars">' + stars(r.rating) + '</span>' +
-          '<span class="muted small">' + r.date + '</span></div>' +
-          (r.title ? '<p style="margin:.3rem 0 .2rem"><strong>' + esc(r.title) + '</strong></p>' : '') +
-          '<p class="muted" data-testid="review-body" style="margin:0">' + esc(r.body) + '</p>' +
-        '</article>').join('');
-    }
-    renderReviews();
-
-    const reviewForm = $('#review-form');
-    const comment = $('#review-comment');
-    comment.addEventListener('input', () => { $('#review-comment-count').textContent = comment.value.length + ' / 500'; });
-    reviewForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      $('#review-success').hidden = true;
-      const name = $('#review-name');
-      const rating = $('input[name="rating"]:checked', reviewForm);
-      const checks = [
-        [name, '#review-name-error', name.value.trim().length >= 2 ? '' : 'Name must be at least 2 characters.'],
-        [null, '#review-rating-error', rating ? '' : 'Please choose a star rating.'],
-        [comment, '#review-comment-error', comment.value.trim().length >= 10 ? '' : 'Review must be at least 10 characters.'],
-      ];
-      let firstInvalid = null;
-      checks.forEach(([field, errSel, msg]) => {
-        $(errSel).textContent = msg;
-        if (field) field.setAttribute('aria-invalid', String(Boolean(msg)));
-        if (msg && !firstInvalid) firstInvalid = field || $('#rating-5');
-      });
-      if (firstInvalid) { firstInvalid.focus(); return; }
-
-      const submit = $('#review-submit');
-      setBusy(submit, true, 'Posting…');
-      await wait(800);
-      setBusy(submit, false);
-      reviews.unshift({ author: name.value.trim(), rating: Number(rating.value), title: '', body: comment.value.trim(), date: today() });
-      renderReviews();
-      reviewForm.reset();
-      $('#review-comment-count').textContent = '0 / 500';
-      $$('[aria-invalid]', reviewForm).forEach((el) => el.removeAttribute('aria-invalid'));
-      $('#review-success').hidden = false;
-    });
-
-    // ---- Vendor terms
-    const returnDays = 14 + (p.id % 3) * 8;
-    $('#pdp-terms-title').textContent = p.vendor + ' — Vendor Terms of Sale';
-    $('#pdp-terms').innerHTML = [
-      'Items may be returned within ' + returnDays + ' days of delivery in original condition.',
-      p.vendor + ' ships from its own warehouse; dispatch takes 1–2 business days.',
-      'Warranty: ' + (1 + (p.id % 2)) + ' year(s) limited manufacturer warranty against defects.',
-      'Prices include all applicable fees except sales tax, which is calculated at checkout.',
-      'ShopLab is a demo store: no goods are shipped and no payments are taken.',
-    ].map((t) => '<li data-testid="pdp-terms-item">' + esc(t) + '</li>').join('');
-  }
-
-  // ==========================================================================
-  // Page: Checkout
-  // ==========================================================================
-
-  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-  function formatCardNumber(v) {
-    return v.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
-  }
-  function formatExpiry(v) {
-    const d = v.replace(/\D/g, '').slice(0, 4);
-    return d.length >= 3 ? d.slice(0, 2) + '/' + d.slice(2) : d;
-  }
-  function formatPhone(v) {
-    const d = v.replace(/\D/g, '').slice(0, 10);
-    if (d.length <= 3) return d.length ? '(' + d : '';
-    if (d.length <= 6) return '(' + d.slice(0, 3) + ') ' + d.slice(3);
-    return '(' + d.slice(0, 3) + ') ' + d.slice(3, 6) + '-' + d.slice(6);
-  }
-  function cardBrand(digits) {
-    if (/^4/.test(digits)) return 'VISA';
-    if (/^(5[1-5]|2[2-7])/.test(digits)) return 'MASTERCARD';
-    if (/^3[47]/.test(digits)) return 'AMEX';
-    if (/^6(011|5)/.test(digits)) return 'DISCOVER';
-    return 'CARD';
-  }
-  function luhn(digits) {
-    let sum = 0;
-    let dbl = false;
-    for (let i = digits.length - 1; i >= 0; i--) {
-      let d = Number(digits[i]);
-      if (dbl) { d *= 2; if (d > 9) d -= 9; }
-      sum += d;
-      dbl = !dbl;
-    }
-    return sum % 10 === 0;
-  }
-  function expiryError(v) {
-    const m = /^(\d{2})\/(\d{2})$/.exec(v);
-    if (!m) return 'Enter expiry as MM/YY.';
-    const month = Number(m[1]);
-    const year = 2000 + Number(m[2]);
-    if (month < 1 || month > 12) return 'Month must be between 01 and 12.';
-    const now = new Date();
-    if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) return 'This card has expired.';
-    return '';
-  }
-
-  function gatewayWidgetHtml() {
-    return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>SecurePay</title><style>' +
-      ':root{color-scheme:light dark}body{margin:0;font:14px/1.45 system-ui,sans-serif;background:#fff;color:#111}' +
-      '@media (prefers-color-scheme:dark){body{background:#171b2e;color:#e7e9f3}input{background:#0f1220!important;color:#e7e9f3!important;border-color:#2c3354!important}}' +
-      '.gw{padding:16px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}' +
-      '.tag{font-size:11px;font-weight:700;background:#fde68a;color:#78350f;padding:2px 6px;border-radius:4px}' +
-      'label{display:block;font-size:12px;font-weight:600;margin:8px 0 3px}' +
-      'input{width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font:inherit;font-family:ui-monospace,monospace}' +
-      '.row{display:flex;gap:10px}.row>div{flex:1}' +
-      'button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:6px;background:#0f766e;color:#fff;font:inherit;font-weight:700;cursor:pointer}' +
-      'button:disabled{opacity:.6;cursor:not-allowed}#gw-msg{margin:8px 0 0;font-size:13px;min-height:18px}.ok{color:#15803d}.err{color:#dc2626}' +
-      '</style></head><body data-testid="gateway-body"><div class="gw">' +
-      '<header><strong>🔐 SecurePay</strong><span class="tag">TEST MODE</span></header>' +
-      '<div>Amount due: <strong id="gw-amount" data-testid="gateway-amount">$0.00</strong></div>' +
-      '<form id="gw-form" novalidate>' +
-      '<label for="gw-card">Card number</label>' +
-      '<input id="gw-card" name="gwCard" inputmode="numeric" maxlength="19" placeholder="4242 4242 4242 4242" data-testid="gateway-card-input" aria-label="Gateway card number">' +
-      '<div class="row"><div><label for="gw-exp">Expiry</label><input id="gw-exp" name="gwExp" maxlength="5" placeholder="MM/YY" data-testid="gateway-expiry-input" aria-label="Gateway card expiry"></div>' +
-      '<div><label for="gw-cvc">CVC</label><input id="gw-cvc" name="gwCvc" maxlength="4" placeholder="123" data-testid="gateway-cvc-input" aria-label="Gateway card CVC"></div></div>' +
-      '<button type="submit" id="gw-pay" data-testid="gateway-authorize-btn">Authorize payment</button>' +
-      '<p id="gw-msg" role="status" data-testid="gateway-message"></p>' +
-      '</form></div><script>' +
-      '(function(){var f=document.getElementById("gw-form"),c=document.getElementById("gw-card"),x=document.getElementById("gw-exp"),v=document.getElementById("gw-cvc"),b=document.getElementById("gw-pay"),m=document.getElementById("gw-msg"),a=document.getElementById("gw-amount");' +
-      'function say(t,k){m.textContent=t;m.className=k||"";}' +
-      'c.addEventListener("input",function(){var d=c.value.replace(/\\D/g,"").slice(0,16);c.value=d.replace(/(.{4})/g,"$1 ").trim();});' +
-      'x.addEventListener("input",function(){var d=x.value.replace(/\\D/g,"").slice(0,4);x.value=d.length>=3?d.slice(0,2)+"/"+d.slice(2):d;});' +
-      'v.addEventListener("input",function(){v.value=v.value.replace(/\\D/g,"").slice(0,4);});' +
-      'window.addEventListener("message",function(e){if(e.data&&e.data.type==="shoplab:amount"){a.textContent=e.data.formatted;}});' +
-      'f.addEventListener("submit",function(e){e.preventDefault();var d=c.value.replace(/\\D/g,"");' +
-      'if(d.length<15){say("Enter a valid card number.","err");return;}' +
-      'if(!/^(0[1-9]|1[0-2])\\/\\d{2}$/.test(x.value)){say("Enter expiry as MM/YY.","err");return;}' +
-      'if(!/^\\d{3,4}$/.test(v.value)){say("Enter a valid CVC.","err");return;}' +
-      'b.disabled=true;b.textContent="Authorizing…";say("");' +
-      'setTimeout(function(){' +
-      'if(d==="4000000000000002"){say("Card declined. Try 4242 4242 4242 4242.","err");b.disabled=false;b.textContent="Authorize payment";parent.postMessage({type:"shoplab:gateway",status:"declined"},"*");return;}' +
-      'var tok="tok_"+Math.random().toString(36).slice(2,12);say("Payment authorized ✓","ok");b.textContent="Authorized";' +
-      '[c,x,v].forEach(function(i){i.disabled=true;});' +
-      'parent.postMessage({type:"shoplab:gateway",status:"authorized",token:tok,last4:d.slice(-4)},"*");},1500);});' +
-      'parent.postMessage({type:"shoplab:gateway-ready"},"*");})();' +
-      '</scr' + 'ipt></body></html>';
-  }
-
-  function initCheckout() {
-    const form = $('#checkout-form');
-    const state = { promo: null, gatewayToken: null, giftMessage: '', processing: false, lastOrder: null };
-    const radioValue = (name) => form.elements.namedItem(name).value;
-    const isCard = () => radioValue('paymentMethod') === 'card';
-
-    // ---- Totals
-    function totals() {
-      const lines = Cart.lines();
-      const count = lines.reduce((s, l) => s + l.qty, 0);
-      const subtotal = round2(lines.reduce((s, l) => s + l.qty * l.product.price, 0));
-      let discount = 0;
-      if (state.promo && state.promo.type === 'percent' && (!state.promo.min || subtotal >= state.promo.min)) {
-        discount = round2(subtotal * state.promo.value / 100);
-      }
-      const method = radioValue('shipping');
-      const freeStandard = subtotal >= FREE_SHIPPING_THRESHOLD || (state.promo && state.promo.type === 'shipping');
-      const shipping = !lines.length ? 0 : method === 'standard' && freeStandard ? 0 : SHIPPING_RATES[method];
-      const tax = round2((subtotal - discount) * TAX_RATE);
-      const total = round2(subtotal - discount + shipping + tax);
-      return { lines, count, subtotal, discount, shipping, tax, total, freeStandard };
-    }
-
-    // ---- Cart rendering
-    const list = $('#cart-list');
-
-    function cartItemHtml(l, i, all) {
-      const p = l.product;
-      return (
-        '<li class="cart-item" draggable="true" data-id="' + p.id + '" id="cart-item-' + p.id + '" data-testid="cart-item">' +
-          '<span class="drag-handle" aria-hidden="true" data-testid="cart-item-drag-handle">⠿</span>' +
-          '<img src="' + productImage(p) + '" alt="" width="48" height="48">' +
-          '<div>' +
-            '<p class="cart-item-name" data-testid="cart-item-name">' + esc(p.name) + '</p>' +
-            '<div class="cart-item-meta">' +
-              '<div class="qty qty-sm" role="group" aria-label="Quantity for ' + esc(p.name) + '">' +
-                '<button type="button" data-action="dec" data-testid="cart-item-qty-decrement" aria-label="Decrease quantity of ' + esc(p.name) + '"' + (l.qty <= 1 ? ' disabled' : '') + '>−</button>' +
-                '<input type="number" id="cart-qty-' + p.id + '" value="' + l.qty + '" min="1" max="' + p.stock + '" data-testid="cart-item-qty-input" aria-label="Quantity of ' + esc(p.name) + '">' +
-                '<button type="button" data-action="inc" data-testid="cart-item-qty-increment" aria-label="Increase quantity of ' + esc(p.name) + '"' + (l.qty >= p.stock ? ' disabled' : '') + '>+</button>' +
-              '</div>' +
-              '<span class="small muted">' + money(p.price) + ' each</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="cart-item-actions">' +
-            '<span class="cart-item-total" data-testid="cart-item-total">' + money(p.price * l.qty) + '</span>' +
-            '<div class="row" style="gap:.15rem">' +
-              '<button type="button" class="btn btn-sm btn-ghost btn-icon" data-action="up" data-testid="cart-item-move-up" aria-label="Move ' + esc(p.name) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-              '<button type="button" class="btn btn-sm btn-ghost btn-icon" data-action="down" data-testid="cart-item-move-down" aria-label="Move ' + esc(p.name) + ' down"' + (i === all.length - 1 ? ' disabled' : '') + '>↓</button>' +
-              '<button type="button" class="btn btn-sm btn-ghost btn-icon" data-action="remove" data-testid="cart-item-remove" aria-label="Remove ' + esc(p.name) + ' from cart">✕</button>' +
-            '</div>' +
-          '</div>' +
-        '</li>'
-      );
-    }
-
-    function renderCart() {
-      const t = totals();
-      list.innerHTML = t.lines.map(cartItemHtml).join('');
-      list.hidden = !t.lines.length;
-      $('#cart-empty').hidden = t.lines.length > 0;
-      $('#clear-cart').disabled = !t.lines.length;
-      $('#summary-count').textContent = String(t.count);
-      $('#summary-subtotal').textContent = money(t.subtotal);
-      $('#summary-discount-row').hidden = !t.discount;
-      $('#summary-discount').textContent = '−' + money(t.discount);
-      $('#summary-shipping').textContent = t.shipping === 0 && t.lines.length ? 'FREE' : money(t.shipping);
-      $('#summary-tax').textContent = money(t.tax);
-      $('#summary-total').textContent = money(t.total);
-      $('#ship-standard-price').textContent = t.freeStandard ? 'FREE' : money(SHIPPING_RATES.standard);
-      sendGatewayAmount(t.total);
-    }
-
-    list.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const id = Number(btn.closest('[data-testid="cart-item"]').dataset.id);
-      const items = Cart.items();
-      const idx = items.findIndex((i) => i.id === id);
-      const item = items[idx];
-      switch (btn.dataset.action) {
-        case 'inc': Cart.setQty(id, item.qty + 1); break;
-        case 'dec': Cart.setQty(id, item.qty - 1); break;
-        case 'remove':
-          Cart.remove(id);
-          toast(getProduct(id).name + ' removed from cart', 'info');
-          break;
-        case 'up':
-        case 'down': {
-          const ids = items.map((i) => i.id);
-          const j = btn.dataset.action === 'up' ? idx - 1 : idx + 1;
-          if (j < 0 || j >= ids.length) return;
-          [ids[idx], ids[j]] = [ids[j], ids[idx]];
-          Cart.reorder(ids);
-          break;
-        }
-        default:
-      }
-    });
-    list.addEventListener('change', (e) => {
-      const input = e.target.closest('[data-testid="cart-item-qty-input"]');
-      if (input) Cart.setQty(Number(input.closest('[data-testid="cart-item"]').dataset.id), Number(input.value));
-    });
-    makeSortable([list], () => Cart.reorder($$(':scope > li', list).map((li) => Number(li.dataset.id))));
-
-    document.addEventListener('cart:change', renderCart);
-    form.addEventListener('change', (e) => { if (e.target.name === 'shipping') renderCart(); });
-
-    $('#cart-add-samples').addEventListener('click', () => {
-      Cart.add(1, 1);
-      Cart.add(4, 2);
-      Cart.add(10, 1);
-      toast('Sample items added', 'success');
-    });
-
-    // Native confirm()
-    $('#clear-cart').addEventListener('click', () => {
-      if (window.confirm('Remove all items from your cart?')) {
-        Cart.clear();
-        toast('Cart cleared', 'info');
-      } else {
-        toast('Cart kept', 'info');
-      }
-    });
-
-    // ---- Promo code (2 s mock validation)
-    const promoInput = $('#promo-code');
-    const promoBtn = $('#apply-promo');
-    const promoError = $('#promo-error');
-    const promoLoading = $('#promo-loading');
-    const promoSuccess = $('#promo-success');
-
-    async function applyPromo() {
-      const code = promoInput.value.trim().toUpperCase();
-      promoError.textContent = '';
-      promoInput.removeAttribute('aria-invalid');
-      if (!code) {
-        promoError.textContent = 'Please enter a promo code.';
-        promoInput.setAttribute('aria-invalid', 'true');
-        return;
-      }
-      promoSuccess.hidden = true;
-      promoLoading.hidden = false;
-      promoInput.disabled = true;
-      setBusy(promoBtn, true, 'Checking…');
-      await wait(2000);
-      promoLoading.hidden = true;
-      setBusy(promoBtn, false);
-      promoInput.disabled = false;
-
-      const promo = PROMOS[code];
-      const subtotal = totals().subtotal;
-      let error = '';
-      if (code === 'EXPIRED') error = 'This promo code has expired.';
-      else if (!promo) error = '“' + code + '” is not a valid promo code.';
-      else if (promo.min && subtotal < promo.min) error = code + ' requires a subtotal of at least ' + money(promo.min) + '.';
-
-      if (error) {
-        promoError.textContent = error;
-        promoInput.setAttribute('aria-invalid', 'true');
-        return;
-      }
-      state.promo = Object.assign({ code }, promo);
-      promoInput.value = code;
-      promoInput.disabled = true;
-      promoBtn.disabled = true;
-      $('#promo-success-text').textContent = 'Code ' + code + ' applied — ' + promo.label + '!';
-      promoSuccess.dataset.code = code;
-      promoSuccess.hidden = false;
-      renderCart();
-    }
-
-    promoBtn.addEventListener('click', applyPromo);
-    promoInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); applyPromo(); }
-    });
-    $('#promo-remove').addEventListener('click', () => {
-      state.promo = null;
-      promoSuccess.hidden = true;
-      delete promoSuccess.dataset.code;
-      promoInput.disabled = false;
-      promoBtn.disabled = false;
-      promoInput.value = '';
-      promoInput.focus();
-      renderCart();
-    });
-
-    // ---- Input masks
-    const cardNumber = $('#card-number');
-    cardNumber.addEventListener('input', () => {
-      cardNumber.value = formatCardNumber(cardNumber.value);
-      const brand = cardBrand(cardNumber.value.replace(/\D/g, ''));
-      $('#card-brand').textContent = brand;
-      $('#card-brand').dataset.brand = brand.toLowerCase();
-    });
-    $('#card-expiry').addEventListener('input', (e) => { e.target.value = formatExpiry(e.target.value); });
-    $('#card-cvv').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
-    $('#phone').addEventListener('input', (e) => { e.target.value = formatPhone(e.target.value); });
-
-    // ---- Country combobox
-    createCombobox({
-      input: $('#country-input'),
-      listbox: $('#country-listbox'),
-      toggle: $('#country-toggle'),
-      hidden: $('#country'),
-      options: COUNTRIES.map((c) => ({ value: c, label: c })),
-      testid: 'country-combobox',
-      onSelect: (o) => { if (o) validateRule(ruleFor('country-input')); },
-    });
-
-    // ---- Payment method + gateway iframe
-    const frame = $('#payment-gateway-frame');
-    const gatewayStatus = $('#gateway-status');
-    frame.srcdoc = gatewayWidgetHtml();
-
-    function sendGatewayAmount(total) {
-      if (frame.contentWindow) frame.contentWindow.postMessage({ type: 'shoplab:amount', formatted: money(total) }, '*');
-    }
-
-    form.addEventListener('change', (e) => {
-      if (e.target.name !== 'paymentMethod') return;
-      $('#card-fields').hidden = !isCard();
-      $('#gateway-fields').hidden = isCard();
-    });
-
-    window.addEventListener('message', (e) => {
-      if (e.source !== frame.contentWindow || !e.data) return;
-      if (e.data.type === 'shoplab:gateway-ready') sendGatewayAmount(totals().total);
-      if (e.data.type === 'shoplab:gateway') {
-        if (e.data.status === 'authorized') {
-          state.gatewayToken = e.data.token;
-          $('#gateway-token').value = e.data.token;
-          gatewayStatus.className = 'alert alert-success';
-          gatewayStatus.dataset.status = 'authorized';
-          gatewayStatus.textContent = 'Payment authorized — card ending ' + e.data.last4 + ' (token ' + e.data.token + ')';
-          $('#gateway-error').textContent = '';
-        } else {
-          state.gatewayToken = null;
-          $('#gateway-token').value = '';
-          gatewayStatus.className = 'alert alert-error';
-          gatewayStatus.dataset.status = 'declined';
-          gatewayStatus.textContent = 'Payment declined by the gateway. Try another card.';
-        }
-      }
-    });
-
-    // ---- Native alert() / prompt()
-    $('#help-alert-btn').addEventListener('click', () => {
-      window.alert('Need help? Call 1-800-SHOPLAB or email support@shoplab.test');
-    });
-    $('#gift-message-btn').addEventListener('click', () => {
-      const msg = window.prompt('Enter a gift message (max 100 characters):', state.giftMessage);
-      if (msg === null) return;
-      state.giftMessage = msg.trim().slice(0, 100);
-      $('#gift-message-value').textContent = state.giftMessage || 'none';
-    });
-
-    // ---- Terms gate the submit button
-    const terms = $('#agree-terms');
-    const placeOrder = $('#place-order');
-    terms.addEventListener('change', () => { placeOrder.disabled = !terms.checked; });
-    placeOrder.disabled = !terms.checked;
-
-    // ---- Validation
-    const rules = [
-      { field: 'full-name', label: 'Full name', test: (v) => (v.trim().length >= 2 ? '' : 'Enter your full name (at least 2 characters).') },
-      { field: 'email', label: 'Email', test: (v) => (!v.trim() ? 'Email is required.' : EMAIL_RE.test(v.trim()) ? '' : 'Enter a valid email address, e.g. name@example.com.') },
-      { field: 'phone', label: 'Phone', test: (v) => (!v || v.replace(/\D/g, '').length === 10 ? '' : 'Phone number must have 10 digits.') },
-      { field: 'address', label: 'Street address', test: (v) => (v.trim().length >= 5 ? '' : 'Enter your street address.') },
-      { field: 'city', label: 'City', test: (v) => (v.trim().length >= 2 ? '' : 'Enter your city.') },
-      { field: 'postal-code', label: 'Postal code', test: (v) => (/^[A-Za-z0-9][A-Za-z0-9 -]{2,9}$/.test(v.trim()) ? '' : 'Enter a valid postal code.') },
-      { field: 'country-input', errorId: 'country-error', label: 'Country', test: () => ($('#country').value ? '' : 'Select a country from the list.') },
-      { field: 'card-name', label: 'Name on card', when: isCard, test: (v) => (v.trim().length >= 2 ? '' : 'Enter the name shown on the card.') },
-      {
-        field: 'card-number', label: 'Card number', when: isCard,
-        test: (v) => {
-          const d = v.replace(/\D/g, '');
-          if (!d) return 'Card number is required.';
-          return d.length >= 15 && luhn(d) ? '' : 'Enter a valid card number.';
-        },
-      },
-      { field: 'card-expiry', label: 'Expiry', when: isCard, test: expiryError },
-      { field: 'card-cvv', label: 'CVV', when: isCard, test: (v) => (/^\d{3,4}$/.test(v) ? '' : 'Enter the 3 or 4 digit security code.') },
-      { field: 'payment-gateway-frame', errorId: 'gateway-error', label: 'SecurePay', when: () => !isCard(), test: () => (state.gatewayToken ? '' : 'Authorize the payment in the SecurePay frame first.') },
-    ];
-    const ruleFor = (field) => rules.find((r) => r.field === field);
-
-    function validateRule(rule) {
-      const el = $('#' + rule.field);
-      const active = !rule.when || rule.when();
-      const msg = active ? rule.test(el.value || '') : '';
-      const errEl = $('#' + (rule.errorId || rule.field + '-error'));
-      if (errEl) errEl.textContent = msg;
-      if (el.matches('input, select, textarea')) {
-        el.setAttribute('aria-invalid', msg ? 'true' : 'false');
-        el.classList.toggle('was-validated', active);
-      }
-      return msg;
-    }
-
-    // Validate on blur once touched; re-validate live while a field is invalid.
-    form.addEventListener('input', (e) => {
-      e.target.dataset.touched = 'true';
-      const rule = ruleFor(e.target.id);
-      if (rule && e.target.getAttribute('aria-invalid') === 'true') validateRule(rule);
-    });
-    form.addEventListener('focusout', (e) => {
-      const rule = ruleFor(e.target.id);
-      if (rule && e.target.dataset.touched) validateRule(rule);
-    });
-
-    const errorSummary = $('#checkout-error-summary');
-    $('#checkout-error-list').addEventListener('click', (e) => {
-      const a = e.target.closest('a[href^="#"]');
-      if (!a) return;
-      e.preventDefault();
-      const target = $(a.getAttribute('href'));
-      if (target) { target.scrollIntoView({ block: 'center' }); if (target.focus) target.focus(); }
-    });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!terms.checked) return;
-      const errors = rules.map((r) => ({ r, msg: validateRule(r) })).filter((x) => x.msg);
-      if (!Cart.count()) errors.unshift({ r: { field: 'cart-list', label: 'Cart' }, msg: 'Your cart is empty.' });
-      if (errors.length) {
-        $('#checkout-error-list').innerHTML = errors.map(({ r, msg }) =>
-          '<li><a href="#' + r.field + '" data-testid="checkout-error-item" data-field="' + r.field + '">' + esc(r.label) + ': ' + esc(msg) + '</a></li>').join('');
-        errorSummary.hidden = false;
-        errorSummary.focus();
-        errorSummary.scrollIntoView({ block: 'start' });
-        return;
-      }
-      errorSummary.hidden = true;
-      openConfirm();
-    });
-
-    // ---- Confirm order <dialog>
-    const modal = $('#confirm-order-modal');
-    const confirmBtn = $('#confirm-order-submit');
-    const cancelBtn = $('#confirm-order-cancel');
-
-    function openConfirm() {
-      const t = totals();
-      const row = (label, value, testid, strong) =>
-        '<tr' + (testid ? ' data-testid="' + testid + '"' : '') + '><td>' + (strong ? '<strong>' + label + '</strong>' : label) + '</td><td>' + (strong ? '<strong>' + value + '</strong>' : value) + '</td></tr>';
-      $('#confirm-order-lines').innerHTML =
-        t.lines.map((l) => row(l.qty + ' × ' + esc(l.product.name), money(l.qty * l.product.price), 'confirm-order-line')).join('') +
-        '<tr><td colspan="2"><hr style="border:0;border-top:1px solid var(--border)"></td></tr>' +
-        row('Subtotal', money(t.subtotal)) +
-        (t.discount ? row('Discount (' + state.promo.code + ')', '−' + money(t.discount)) : '') +
-        row('Shipping (' + radioValue('shipping') + ')', t.shipping ? money(t.shipping) : 'FREE') +
-        row('Tax', money(t.tax)) +
-        row('Total', money(t.total), 'confirm-order-total', true);
-      $('#confirm-order-processing').hidden = true;
-      modal.showModal();
-      confirmBtn.focus();
-    }
-
-    function cancelOrder() {
-      if (state.processing) return;
-      modal.close('cancel');
-      toast('Order not placed — you can keep editing.', 'info');
-    }
-    cancelBtn.addEventListener('click', cancelOrder);
-    $('#confirm-order-close').addEventListener('click', cancelOrder);
-    modal.addEventListener('cancel', (e) => {
-      e.preventDefault(); // Escape key: route through cancelOrder so behaviour is identical
-      cancelOrder();
-    });
-
-    confirmBtn.addEventListener('click', async () => {
-      state.processing = true;
-      setBusy(confirmBtn, true, 'Processing…');
-      cancelBtn.disabled = true;
-      $('#confirm-order-close').disabled = true;
-      $('#confirm-order-processing').hidden = false;
-      await wait(1500);
-
-      const t = totals();
-      const now = new Date();
-      const order = {
-        id: 'SL-' + now.toISOString().slice(0, 10).replace(/-/g, '') + '-' + String(Math.floor(1000 + Math.random() * 9000)),
-        date: now.toISOString().slice(0, 19).replace('T', ' '),
-        customer: { name: $('#full-name').value.trim(), email: $('#email').value.trim() },
-        shipping: { method: radioValue('shipping'), address: $('#address').value.trim(), city: $('#city').value.trim(), country: $('#country').value },
-        payment: isCard() ? 'card' : 'gateway',
-        promo: state.promo ? state.promo.code : null,
-        giftMessage: state.giftMessage,
-        items: t.lines.map((l) => ({ id: l.product.id, name: l.product.name, qty: l.qty, price: l.product.price })),
-        totals: { subtotal: t.subtotal, discount: t.discount, shipping: t.shipping, tax: t.tax, total: t.total },
-      };
-      store.set(KEYS.orders, store.get(KEYS.orders, []).concat(order));
-      state.lastOrder = order;
-
-      state.processing = false;
-      setBusy(confirmBtn, false);
-      cancelBtn.disabled = false;
-      $('#confirm-order-close').disabled = false;
-      modal.close('confirmed');
-      Cart.clear();
-
-      $('#checkout-view').hidden = true;
-      $('#order-success').hidden = false;
-      $('#order-id').textContent = order.id;
-      $('#order-total').textContent = money(order.totals.total);
-      $('#order-email').textContent = order.customer.email;
-      window.scrollTo(0, 0);
-      toast('Order placed successfully!', 'success');
-    });
-
-    // ---- Downloads after purchase
-    $('#download-invoice-csv').addEventListener('click', () => {
-      const o = state.lastOrder || sampleOrder();
-      downloadFile('invoice-' + o.id + '.csv', invoiceCsv(o), 'text/csv;charset=utf-8');
-    });
-    $('#download-receipt-pdf').addEventListener('click', () => {
-      const o = state.lastOrder || sampleOrder();
-      downloadFile('receipt-' + o.id + '.pdf', receiptPdf(o), 'application/pdf');
-    });
-
-    renderCart();
-  }
-
-  // ==========================================================================
-  // Page: Admin playground
-  // ==========================================================================
-
-  function initPlayground() {
-    initUploader();
-    initDownloads();
-    initConverterFrame();
-    initDropdowns();
-    initInventoryTable();
-    initWishlistDnD();
-    initDialogs();
-    initWaits();
-    initMouseKeyboard();
-    initMisc();
-  }
-
-  // ---- File upload ---------------------------------------------------------
-
-  function initUploader() {
-    const MAX_BYTES = 5 * 1024 * 1024;
-    const MAX_FILES = 5;
+  /**
+   * Drag-and-drop file uploader with thumbnail previews.
+   * Generates its own markup inside `container`; testids are `${prefix}-*`.
+   */
+  function createUploader(container, { prefix, label, hint, maxFiles = 5, maxBytes = 5 * 1024 * 1024, onChange }) {
     const ALLOWED = ['jpg', 'jpeg', 'png', 'pdf'];
     let files = [];
     let seq = 0;
+    container.classList.add('uploader');
+    container.innerHTML =
+      '<label class="dropzone" for="' + prefix + '-input" id="' + prefix + '-dropzone" data-testid="' + prefix + '-dropzone" tabindex="0" aria-describedby="' + prefix + '-hint">' +
+        '<span class="dz-icon" aria-hidden="true">📤</span><strong>' + esc(label) + '</strong>' +
+        '<span class="small muted" id="' + prefix + '-hint">' + esc(hint || 'Drag & drop or click to browse · JPG, PNG or PDF up to 5 MB') + '</span>' +
+      '</label>' +
+      '<input type="file" class="visually-hidden" id="' + prefix + '-input" name="' + prefix + '" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"' + (maxFiles > 1 ? ' multiple' : '') + ' data-testid="' + prefix + '-input" aria-label="' + esc(label) + '">' +
+      '<div class="alert alert-error" id="' + prefix + '-error" data-testid="' + prefix + '-error" role="alert" hidden></div>' +
+      '<ul class="upload-list" id="' + prefix + '-list" data-testid="' + prefix + '-preview-list" aria-label="Selected files"></ul>';
 
-    const dz = $('#upload-dropzone');
-    const input = $('#file-upload');
-    const list = $('#upload-list');
-    const errorBox = $('#upload-error');
-    const clearBtn = $('#upload-clear');
-    const submitBtn = $('#upload-submit');
-    const success = $('#upload-success');
-    const progressWrap = $('#upload-progress-wrap');
-    const progress = $('#upload-progress');
-    const bar = $('#upload-progress-bar');
-
+    const dz = $('.dropzone', container);
+    const input = $('input[type="file"]', container);
+    const list = $('.upload-list', container);
+    const errorBox = $('.alert', container);
     const fmtSize = (b) => (b < 1024 ? b + ' B' : b < 1048576 ? (b / 1024).toFixed(1) + ' KB' : (b / 1048576).toFixed(2) + ' MB');
 
     function addFiles(fileList) {
       const errors = [];
       Array.from(fileList).forEach((f) => {
         const ext = f.name.includes('.') ? f.name.split('.').pop().toLowerCase() : '';
-        if (!ALLOWED.includes(ext)) errors.push(f.name + ': unsupported file type (allowed: JPG, PNG, PDF).');
-        else if (f.size > MAX_BYTES) errors.push(f.name + ': file is larger than 5 MB.');
-        else if (files.length >= MAX_FILES) errors.push(f.name + ': you can upload at most ' + MAX_FILES + ' files.');
-        else if (files.some((x) => x.file.name === f.name && x.file.size === f.size)) errors.push(f.name + ': already added.');
-        else files.push({ id: ++seq, file: f, isPdf: ext === 'pdf', url: ext === 'pdf' ? null : URL.createObjectURL(f) });
+        if (!ALLOWED.includes(ext)) { errors.push(f.name + ': unsupported file type (allowed: JPG, PNG, PDF).'); return; }
+        if (f.size > maxBytes) { errors.push(f.name + ': file is larger than 5 MB.'); return; }
+        if (maxFiles === 1) { files.forEach((x) => x.url && URL.revokeObjectURL(x.url)); files = []; }
+        if (files.length >= maxFiles) { errors.push(f.name + ': you can upload at most ' + maxFiles + ' files.'); return; }
+        if (files.some((x) => x.file.name === f.name && x.file.size === f.size)) { errors.push(f.name + ': already added.'); return; }
+        files.push({ id: ++seq, file: f, isPdf: ext === 'pdf', url: ext === 'pdf' ? null : URL.createObjectURL(f) });
       });
       errorBox.hidden = !errors.length;
-      errorBox.innerHTML = errors.length ? '<div><strong>Some files were rejected:</strong><ul>' + errors.map((m) => '<li data-testid="upload-error-item">' + esc(m) + '</li>').join('') + '</ul></div>' : '';
-      success.hidden = true;
+      errorBox.innerHTML = errors.length ? '<div><strong>Some files were rejected:</strong><ul>' + errors.map((m) => '<li data-testid="' + prefix + '-error-item">' + esc(m) + '</li>').join('') + '</ul></div>' : '';
       input.value = ''; // allow re-selecting the same file
       render();
     }
 
     function render() {
       list.innerHTML = files.map((f) =>
-        '<li class="upload-item" data-testid="upload-preview-item" data-file-name="' + esc(f.file.name) + '" id="upload-item-' + f.id + '">' +
+        '<li class="upload-item" data-testid="' + prefix + '-preview-item" data-file-name="' + esc(f.file.name) + '">' +
           '<div class="thumb">' + (f.isPdf
-            ? '<span data-testid="upload-preview-pdf-icon" aria-label="PDF document" role="img">📄</span>'
-            : '<img src="' + f.url + '" alt="Preview of ' + esc(f.file.name) + '" data-testid="upload-preview-thumbnail">') + '</div>' +
+            ? '<span data-testid="' + prefix + '-preview-pdf-icon" role="img" aria-label="PDF document">📄</span>'
+            : '<img src="' + f.url + '" alt="Preview of ' + esc(f.file.name) + '" data-testid="' + prefix + '-preview-thumbnail">') + '</div>' +
           '<div class="meta">' +
-            '<span class="name" data-testid="upload-file-name" title="' + esc(f.file.name) + '">' + esc(f.file.name) + '</span>' +
-            '<span class="muted" data-testid="upload-file-size">' + fmtSize(f.file.size) + '</span>' +
-            '<button type="button" class="btn btn-sm btn-danger" data-remove="' + f.id + '" data-testid="upload-remove-btn" aria-label="Remove ' + esc(f.file.name) + '">Remove</button>' +
+            '<span class="name" data-testid="' + prefix + '-file-name" title="' + esc(f.file.name) + '">' + esc(f.file.name) + '</span>' +
+            '<span class="muted">' + fmtSize(f.file.size) + '</span>' +
+            '<button type="button" class="btn btn-sm btn-ghost" data-remove="' + f.id + '" data-testid="' + prefix + '-remove-btn" aria-label="Remove ' + esc(f.file.name) + '">Remove</button>' +
           '</div>' +
         '</li>').join('');
-      $('#upload-count').textContent = files.length + (files.length === 1 ? ' file' : ' files') + ' selected';
-      clearBtn.disabled = !files.length;
-      submitBtn.disabled = !files.length;
+      container.dataset.count = String(files.length);
+      if (onChange) onChange(files.map((f) => f.file));
     }
 
     input.addEventListener('change', () => addFiles(input.files));
@@ -1665,6 +954,7 @@
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
     });
     ['dragenter', 'dragover'].forEach((type) => dz.addEventListener(type, (e) => {
+      if (drag.el) return; // a sortable item, not a file
       e.preventDefault();
       dz.classList.add('is-dragover');
     }));
@@ -1674,287 +964,141 @@
       dz.classList.remove('is-dragover');
       if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
     });
-    // Stop the browser from navigating to a file dropped outside the zone.
-    ['dragover', 'drop'].forEach((type) => window.addEventListener(type, (e) => {
-      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
-    }));
-
     list.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-remove]');
       if (!btn) return;
       const f = files.find((x) => x.id === Number(btn.dataset.remove));
       if (f && f.url) URL.revokeObjectURL(f.url);
       files = files.filter((x) => x !== f);
-      success.hidden = true;
       render();
     });
 
-    clearBtn.addEventListener('click', () => {
-      files.forEach((f) => f.url && URL.revokeObjectURL(f.url));
-      files = [];
-      errorBox.hidden = true;
-      success.hidden = true;
-      render();
-    });
-
-    submitBtn.addEventListener('click', () => {
-      const names = files.map((f) => f.file.name);
-      setBusy(submitBtn, true, 'Uploading…');
-      clearBtn.disabled = true;
-      success.hidden = true;
-      progressWrap.hidden = false;
-      let pct = 0;
-      const timer = setInterval(() => {
-        pct = Math.min(100, pct + 10);
-        bar.style.width = pct + '%';
-        progress.setAttribute('aria-valuenow', String(pct));
-        if (pct < 100) return;
-        clearInterval(timer);
-        setBusy(submitBtn, false);
-        progressWrap.hidden = true;
-        bar.style.width = '0';
-        progress.setAttribute('aria-valuenow', '0');
-        success.textContent = 'Uploaded ' + names.length + (names.length === 1 ? ' file' : ' files') + ' successfully: ' + names.join(', ');
-        success.hidden = false;
+    return {
+      get files() { return files.map((f) => f.file); },
+      clear() {
         files.forEach((f) => f.url && URL.revokeObjectURL(f.url));
         files = [];
+        errorBox.hidden = true;
         render();
-      }, 150);
-    });
-
-    render();
-  }
-
-  // ---- Downloads -----------------------------------------------------------
-
-  function initDownloads() {
-    const log = $('#pg-download-log');
-    document.addEventListener('shoplab:download', (e) => { log.textContent = e.detail.filename; });
-    $('#pg-download-static').addEventListener('click', () => { log.textContent = 'sample.txt'; });
-    $('#pg-download-csv').addEventListener('click', () => {
-      const o = sampleOrder();
-      downloadFile('invoice-' + o.id + '.csv', invoiceCsv(o), 'text/csv;charset=utf-8');
-    });
-    $('#pg-download-pdf').addEventListener('click', () => {
-      const o = sampleOrder();
-      downloadFile('receipt-' + o.id + '.pdf', receiptPdf(o), 'application/pdf');
-    });
-    $('#pg-download-json').addEventListener('click', () => {
-      downloadFile('inventory.json', JSON.stringify(loadInventory(), null, 2), 'application/json');
-    });
-  }
-
-  // ---- Currency converter iframe (with a nested iframe) -------------------
-
-  function initConverterFrame() {
-    const tickerHtml = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' +
-      'body{margin:0;padding:8px 10px;font:13px system-ui,sans-serif;background:#0f172a;color:#e2e8f0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}' +
-      'button{font:inherit;padding:3px 8px;border-radius:4px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;cursor:pointer}' +
-      '</style></head><body data-testid="ticker-body">' +
-      '<span id="ticker-text" data-testid="ticker-text">EUR 0.92 · GBP 0.79 · INR 83.20 · JPY 149.50</span>' +
-      '<button type="button" id="ticker-refresh" data-testid="ticker-refresh-btn">Refresh</button>' +
-      '<span id="ticker-updated" data-testid="ticker-updated">Refreshed 0 times</span>' +
-      '<script>(function(){var n=0;document.getElementById("ticker-refresh").addEventListener("click",function(){n++;document.getElementById("ticker-updated").textContent="Refreshed "+n+(n===1?" time":" times");});})();</scr' + 'ipt>' +
-      '</body></html>';
-
-    const converterHtml = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Currency converter</title><style>' +
-      ':root{color-scheme:light dark}body{margin:0;padding:14px 16px;font:14px/1.45 system-ui,sans-serif;background:#fff;color:#111}' +
-      '@media (prefers-color-scheme:dark){body{background:#171b2e;color:#e7e9f3}input,select{background:#0f1220!important;color:#e7e9f3!important;border-color:#2c3354!important}}' +
-      'h2{font-size:16px;margin:0 0 10px}form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}' +
-      'label{display:block;font-size:12px;font-weight:600;margin-bottom:3px}' +
-      'input,select{padding:7px 9px;border:1px solid #cbd5e1;border-radius:6px;font:inherit;min-width:120px}' +
-      'button{padding:8px 14px;border:0;border-radius:6px;background:#4f46e5;color:#fff;font:inherit;font-weight:700;cursor:pointer}' +
-      '#cv-result{margin:12px 0;font-weight:700;font-size:15px;min-height:22px}' +
-      'iframe{width:100%;height:44px;border:0;border-radius:6px;display:block}' +
-      '</style></head><body data-testid="converter-body">' +
-      '<h2>💱 Currency converter</h2>' +
-      '<form id="cv-form" novalidate>' +
-      '<div><label for="cv-amount">Amount (USD)</label><input type="number" id="cv-amount" name="amount" value="100" min="0" step="0.01" data-testid="converter-amount-input" aria-label="Amount in US dollars"></div>' +
-      '<div><label for="cv-to">Convert to</label><select id="cv-to" name="to" data-testid="converter-currency-select" aria-label="Target currency">' +
-      '<option value="EUR">EUR · Euro</option><option value="GBP">GBP · Pound</option><option value="INR">INR · Rupee</option>' +
-      '<option value="JPY">JPY · Yen</option><option value="CAD">CAD · Canadian $</option><option value="AUD">AUD · Australian $</option></select></div>' +
-      '<button type="submit" id="cv-convert" data-testid="converter-convert-btn">Convert</button>' +
-      '</form>' +
-      '<p id="cv-result" role="status" data-testid="converter-result">Enter an amount and press Convert.</p>' +
-      '<iframe id="rates-ticker" name="rates-ticker" title="Exchange rates ticker" data-testid="rates-ticker-iframe"></iframe>' +
-      '<script>(function(){' +
-      'var R={EUR:0.92,GBP:0.79,INR:83.2,JPY:149.5,CAD:1.36,AUD:1.52};' +
-      'document.getElementById("rates-ticker").srcdoc=' + JSON.stringify(tickerHtml).replace(/</g, '\\u003c') + ';' +
-      'document.getElementById("cv-form").addEventListener("submit",function(e){e.preventDefault();' +
-      'var a=parseFloat(document.getElementById("cv-amount").value),c=document.getElementById("cv-to").value,out=document.getElementById("cv-result");' +
-      'if(isNaN(a)||a<0){out.textContent="Please enter a valid amount.";out.style.color="#dc2626";return;}' +
-      'out.style.color="";var t=a.toFixed(2)+" USD = "+(a*R[c]).toFixed(2)+" "+c;out.textContent=t;' +
-      'parent.postMessage({type:"shoplab:convert",text:t},"*");});' +
-      '})();</scr' + 'ipt></body></html>';
-
-    const frame = $('#currency-converter-frame');
-    frame.srcdoc = converterHtml;
-    window.addEventListener('message', (e) => {
-      if (e.source === frame.contentWindow && e.data && e.data.type === 'shoplab:convert') {
-        $('#converter-parent-result').textContent = e.data.text;
-      }
-    });
-  }
-
-  // ---- Dropdowns -----------------------------------------------------------
-
-  function initDropdowns() {
-    const nativeSel = $('#pg-native-select');
-    nativeSel.addEventListener('change', () => {
-      const opt = nativeSel.selectedOptions[0];
-      $('#pg-native-select-output').textContent = nativeSel.value ? 'Selected: ' + nativeSel.value + ' (' + opt.text + ')' : 'Selected: none';
-    });
-    const multi = $('#pg-multi-select');
-    multi.addEventListener('change', () => {
-      const values = Array.from(multi.selectedOptions).map((o) => o.value);
-      $('#pg-multi-select-output').textContent = 'Selected: ' + (values.length ? values.join(', ') : 'none');
-    });
-    createCombobox({
-      input: $('#pg-combobox-input'),
-      listbox: $('#pg-combobox-listbox'),
-      toggle: $('#pg-combobox-toggle'),
-      options: PRODUCTS.map((p) => ({ value: String(p.id), label: p.name, meta: money(p.price) })),
-      testid: 'product-combobox',
-      onSelect: (o) => {
-        $('#pg-combobox-output').textContent = o ? 'Selected: ' + o.label + ' (id ' + o.value + ')' : 'Selected: none';
       },
-    });
-  }
-
-  // ---- Inventory table -----------------------------------------------------
-
-  function generateInventory() {
-    let seed = 42;
-    const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
-    const adjectives = ['Classic', 'Ultra', 'Eco', 'Smart', 'Compact', 'Deluxe', 'Travel', 'Pro', 'Mini', 'Everyday'];
-    const nouns = {
-      electronics: ['Earbuds', 'Charger', 'Speaker', 'Webcam', 'Monitor Arm'],
-      fashion: ['Scarf', 'Beanie', 'Belt', 'Sneakers', 'Jacket'],
-      home: ['Mug', 'Candle', 'Throw Blanket', 'Planter', 'Cutting Board'],
-      sports: ['Yoga Mat', 'Dumbbell Set', 'Jump Rope', 'Gym Bag', 'Headband'],
-      books: ['Notebook', 'Cookbook', 'Novel', 'Atlas', 'Journal'],
-      beauty: ['Lip Balm', 'Face Mask', 'Hand Cream', 'Shampoo Bar', 'Body Oil'],
+      showError(msg) {
+        errorBox.hidden = !msg;
+        errorBox.textContent = msg;
+      },
     };
-    const cats = Object.keys(CATEGORY_LABELS);
-    return Array.from({ length: 47 }, (_, i) => {
-      const category = cats[i % cats.length];
-      const name = adjectives[Math.floor(rnd() * adjectives.length)] + ' ' + nouns[category][Math.floor(rnd() * 5)];
-      const stock = rnd() < 0.12 ? 0 : Math.floor(rnd() * 120);
-      const price = round2(5 + rnd() * 295);
-      const updated = new Date(Date.UTC(2026, 0, 1 + Math.floor(rnd() * 270))).toISOString().slice(0, 10);
-      return { sku: 'SKU-' + (1001 + i), name, category, stock, price, updated };
-    });
   }
 
-  function loadInventory() {
-    return store.get(KEYS.inventory, null) || generateInventory();
-  }
+  /**
+   * Sortable, searchable, paginated table with optional row selection.
+   * Generates its markup inside `root`; testids are `${prefix}-*`.
+   * columns: [{ key, label, sortable?, num?, render(row, table) → html, sortValue?(row) }]
+   */
+  function createDataTable(opts) {
+    const {
+      root, prefix, columns, getRows, rowKey, rowAttrs, searchFn, searchPlaceholder = 'Search…',
+      filters = [], selectable = false, pageSizes = [5, 10, 25], emptyHtml = 'Nothing to show.', toolbarHtml = '', onRender,
+    } = opts;
+    const state = { query: '', sortKey: opts.sortKey || null, sortDir: opts.sortDir || 'asc', page: 1, pageSize: opts.pageSize || pageSizes[0], selected: new Set(), editing: null, filters: {} };
 
-  function initInventoryTable() {
-    const state = {
-      rows: loadInventory(),
-      query: '',
-      sortKey: null,
-      sortDir: 'asc',
-      page: 1,
-      pageSize: 10,
-      selected: new Set(),
-      editing: null,
-      pendingDelete: null,
-    };
-    const tbody = $('#inventory-body');
-    const pager = $('#inventory-pagination');
-    const selectAll = $('#inventory-select-all');
-    const bulkBtn = $('#inventory-bulk-delete');
-    const viewModal = $('#inventory-view-modal');
-    const deleteModal = $('#inventory-delete-modal');
+    root.classList.add('data-table-root');
+    root.innerHTML =
+      '<div class="table-toolbar">' +
+        (searchFn ? '<input type="search" class="input" id="' + prefix + '-search" data-testid="' + prefix + '-search-input" placeholder="' + esc(searchPlaceholder) + '" aria-label="' + esc(searchPlaceholder) + '">' : '') +
+        filters.map((f) => '<select class="select" id="' + prefix + '-filter-' + f.id + '" data-filter="' + f.id + '" data-testid="' + prefix + '-filter-' + f.id + '" aria-label="' + esc(f.label) + '">' +
+          f.options.map(([v, l]) => '<option value="' + esc(v) + '">' + esc(l) + '</option>').join('') + '</select>').join('') +
+        '<span class="spacer"></span>' + toolbarHtml +
+        '<label class="small muted" for="' + prefix + '-page-size">Rows</label>' +
+        '<select class="select select-sm" id="' + prefix + '-page-size" data-testid="' + prefix + '-page-size-select" aria-label="Rows per page">' +
+          pageSizes.map((n) => '<option value="' + n + '"' + (n === state.pageSize ? ' selected' : '') + '>' + n + '</option>').join('') +
+        '</select>' +
+      '</div>' +
+      '<div class="table-wrap"><table class="data-table" id="' + prefix + '-table" data-testid="' + prefix + '-table"><thead><tr>' +
+        (selectable ? '<th scope="col" class="col-check"><input type="checkbox" data-testid="' + prefix + '-select-all" aria-label="Select all rows on this page"></th>' : '') +
+        columns.map((c) => '<th scope="col"' + (c.num ? ' class="num"' : '') + (c.sortable ? ' aria-sort="none" data-sort-key="' + c.key + '"' : '') + '>' +
+          (c.sortable ? '<button type="button" class="sort-btn" data-testid="' + prefix + '-sort-' + c.key + '">' + esc(c.label) + ' <span class="sort-indicator" aria-hidden="true">↕</span></button>' : esc(c.label)) + '</th>').join('') +
+      '</tr></thead><tbody data-testid="' + prefix + '-body"></tbody></table></div>' +
+      '<div class="table-footer">' +
+        '<p class="small muted" data-testid="' + prefix + '-summary" aria-live="polite"></p>' +
+        '<div class="pagination" data-testid="' + prefix + '-pagination" role="navigation" aria-label="Pagination"></div>' +
+      '</div>';
 
-    const persist = () => store.set(KEYS.inventory, state.rows);
-    const statusOf = (r) => (r.stock === 0 ? ['Out of stock', 'badge-danger'] : r.stock < 10 ? ['Low stock', 'badge-warning'] : ['In stock', 'badge-success']);
-    const findRow = (sku) => state.rows.find((r) => r.sku === sku);
+    const tbody = $('tbody', root);
+    const pager = $('.pagination', root);
+    const summary = $('[data-testid="' + prefix + '-summary"]', root);
+    const selectAll = $('[data-testid="' + prefix + '-select-all"]', root);
 
     function visibleRows() {
       const q = state.query.toLowerCase();
-      let rows = state.rows.filter((r) => !q || (r.sku + ' ' + r.name + ' ' + CATEGORY_LABELS[r.category]).toLowerCase().includes(q));
+      let rows = getRows().filter((r) => (!q || searchFn(r).toLowerCase().includes(q)) &&
+        filters.every((f) => !state.filters[f.id] || f.test(r, state.filters[f.id])));
       if (state.sortKey) {
-        const k = state.sortKey;
+        const col = columns.find((c) => c.key === state.sortKey);
+        const val = col.sortValue || ((r) => r[col.key]);
         const dir = state.sortDir === 'asc' ? 1 : -1;
-        rows = rows.slice().sort((a, b) => (typeof a[k] === 'number' ? a[k] - b[k] : String(a[k]).localeCompare(String(b[k]))) * dir);
+        rows = rows.slice().sort((a, b) => {
+          const x = val(a);
+          const y = val(b);
+          return (typeof x === 'number' ? x - y : String(x).localeCompare(String(y))) * dir;
+        });
       }
       return rows;
     }
 
-    function rowHtml(r) {
-      const [statusText, statusClass] = statusOf(r);
-      const checked = state.selected.has(r.sku);
-      const editing = state.editing === r.sku;
-      const actions = editing
-        ? '<button type="button" class="btn btn-sm btn-success" data-action="save" data-testid="inventory-row-save" aria-label="Save ' + r.sku + '">Save</button>' +
-          '<button type="button" class="btn btn-sm" data-action="cancel" data-testid="inventory-row-cancel" aria-label="Cancel editing ' + r.sku + '">Cancel</button>'
-        : '<button type="button" class="btn btn-sm" data-action="view" data-testid="inventory-row-view" aria-label="View ' + r.sku + '">View</button>' +
-          '<button type="button" class="btn btn-sm" data-action="edit" data-testid="inventory-row-edit" aria-label="Edit ' + r.sku + '">Edit</button>' +
-          '<button type="button" class="btn btn-sm btn-danger" data-action="delete" data-testid="inventory-row-delete" aria-label="Delete ' + r.sku + '">Delete</button>';
-      return (
-        '<tr id="row-' + r.sku + '" data-testid="inventory-row" data-sku="' + r.sku + '" class="' + (checked ? 'is-selected ' : '') + (editing ? 'is-editing' : '') + '">' +
-          '<td><input type="checkbox" data-action="select" data-testid="inventory-row-checkbox" aria-label="Select ' + r.sku + '"' + (checked ? ' checked' : '') + '></td>' +
-          '<td class="mono" data-testid="inventory-cell-sku">' + r.sku + '</td>' +
-          '<td data-testid="inventory-cell-name">' + (editing ? '<input class="input" style="width:170px" id="edit-name-' + r.sku + '" data-testid="inventory-edit-name" aria-label="Name" value="' + esc(r.name) + '">' : esc(r.name)) + '</td>' +
-          '<td data-testid="inventory-cell-category">' + esc(CATEGORY_LABELS[r.category]) + '</td>' +
-          '<td class="num" data-testid="inventory-cell-stock">' + (editing ? '<input class="input" type="number" min="0" step="1" id="edit-stock-' + r.sku + '" data-testid="inventory-edit-stock" aria-label="Stock" value="' + r.stock + '">' : r.stock) + '</td>' +
-          '<td class="num" data-testid="inventory-cell-price">' + (editing ? '<input class="input" type="number" min="0.01" step="0.01" id="edit-price-' + r.sku + '" data-testid="inventory-edit-price" aria-label="Price" value="' + r.price.toFixed(2) + '">' : money(r.price)) + '</td>' +
-          '<td><span class="badge ' + statusClass + '" data-testid="inventory-cell-status">' + statusText + '</span></td>' +
-          '<td data-testid="inventory-cell-updated">' + r.updated + '</td>' +
-          '<td><div class="row-actions">' + actions + '</div></td>' +
-        '</tr>'
-      );
-    }
-
-    function render() {
+    function pageRows() {
       const rows = visibleRows();
       const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
       state.page = clamp(state.page, 1, totalPages);
       const start = (state.page - 1) * state.pageSize;
-      const pageRows = rows.slice(start, start + state.pageSize);
+      return { rows, totalPages, start, page: rows.slice(start, start + state.pageSize) };
+    }
 
-      tbody.innerHTML = pageRows.length
-        ? pageRows.map(rowHtml).join('')
-        : '<tr><td colspan="9" class="muted" data-testid="inventory-empty" style="text-align:center;padding:2rem">No matching items.</td></tr>';
+    const api = { root, tbody, state, visibleRows };
 
-      // Sort indicators
-      $$('#inventory-table th[data-sort-key]').forEach((th) => {
+    function render() {
+      const { rows, totalPages, start, page } = pageRows();
+      const colspan = columns.length + (selectable ? 1 : 0);
+      tbody.innerHTML = page.length ? page.map((r) => {
+        const key = rowKey(r);
+        const sel = state.selected.has(key);
+        return '<tr data-testid="' + prefix + '-row" data-key="' + esc(key) + '"' + (rowAttrs ? ' ' + rowAttrs(r) : '') +
+          ' class="' + (sel ? 'is-selected ' : '') + (state.editing === key ? 'is-editing' : '') + '">' +
+          (selectable ? '<td class="col-check"><input type="checkbox" data-row-select data-testid="' + prefix + '-row-checkbox" aria-label="Select ' + esc(key) + '"' + (sel ? ' checked' : '') + '></td>' : '') +
+          columns.map((c) => '<td' + (c.num ? ' class="num"' : '') + ' data-testid="' + prefix + '-cell-' + c.key + '">' + c.render(r, api) + '</td>').join('') +
+          '</tr>';
+      }).join('') : '<tr><td colspan="' + colspan + '" class="table-empty" data-testid="' + prefix + '-empty">' + emptyHtml + '</td></tr>';
+
+      $$('th[data-sort-key]', root).forEach((th) => {
         const on = th.dataset.sortKey === state.sortKey;
         th.setAttribute('aria-sort', on ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
         $('.sort-indicator', th).textContent = on ? (state.sortDir === 'asc' ? '↑' : '↓') : '↕';
       });
 
-      // Select-all reflects the current page only
-      const pageSkus = pageRows.map((r) => r.sku);
-      const selectedOnPage = pageSkus.filter((s) => state.selected.has(s)).length;
-      selectAll.checked = pageSkus.length > 0 && selectedOnPage === pageSkus.length;
-      selectAll.indeterminate = selectedOnPage > 0 && selectedOnPage < pageSkus.length;
-      $('#inventory-selected-count').textContent = String(state.selected.size);
-      bulkBtn.disabled = state.selected.size === 0;
+      if (selectAll) {
+        const keys = page.map(rowKey);
+        const n = keys.filter((k) => state.selected.has(k)).length;
+        selectAll.checked = keys.length > 0 && n === keys.length;
+        selectAll.indeterminate = n > 0 && n < keys.length;
+      }
 
-      // Pagination (window of up to 5 page numbers)
       const first = clamp(state.page - 2, 1, Math.max(1, totalPages - 4));
       const last = Math.min(totalPages, first + 4);
-      const btn = (label, page, testid, aria, disabled, current) =>
-        '<button type="button" class="btn btn-sm" data-page="' + page + '" data-testid="' + testid + '" aria-label="' + aria + '"' +
+      const btn = (label, p, testid, aria, disabled, current) =>
+        '<button type="button" class="btn btn-sm' + (current ? ' is-current' : '') + '" data-page="' + p + '" data-testid="' + prefix + '-' + testid + '" aria-label="' + aria + '"' +
         (disabled ? ' disabled' : '') + (current ? ' aria-current="page"' : '') + '>' + label + '</button>';
-      let html = btn('«', 1, 'inventory-page-first', 'First page', state.page === 1) +
-        btn('‹ Prev', state.page - 1, 'inventory-page-prev', 'Previous page', state.page === 1);
-      for (let i = first; i <= last; i++) html += btn(String(i), i, 'inventory-page-number', 'Page ' + i, false, i === state.page);
-      html += btn('Next ›', state.page + 1, 'inventory-page-next', 'Next page', state.page === totalPages) +
-        btn('»', totalPages, 'inventory-page-last', 'Last page', state.page === totalPages);
+      let html = btn('«', 1, 'page-first', 'First page', state.page === 1) + btn('‹', state.page - 1, 'page-prev', 'Previous page', state.page === 1);
+      for (let i = first; i <= last; i++) html += btn(String(i), i, 'page-number', 'Page ' + i, false, i === state.page);
+      html += btn('›', state.page + 1, 'page-next', 'Next page', state.page === totalPages) + btn('»', totalPages, 'page-last', 'Last page', state.page === totalPages);
       pager.innerHTML = html;
 
-      $('#inventory-summary').textContent = rows.length
-        ? 'Showing ' + (start + 1) + '–' + (start + pageRows.length) + ' of ' + rows.length + ' items · Page ' + state.page + ' of ' + totalPages
-        : 'Showing 0 of 0 items';
-      $('#inventory-summary').dataset.total = String(rows.length);
+      summary.textContent = rows.length
+        ? 'Showing ' + (start + 1) + '–' + (start + page.length) + ' of ' + rows.length + ' · Page ' + state.page + ' of ' + totalPages
+        : 'Showing 0 of 0';
+      summary.dataset.total = String(rows.length);
+      if (onRender) onRender(api);
     }
+    api.render = render;
 
-    $('#inventory-table thead').addEventListener('click', (e) => {
+    $('thead', root).addEventListener('click', (e) => {
       const th = e.target.closest('th[data-sort-key]');
       if (!th || !e.target.closest('.sort-btn')) return;
       const key = th.dataset.sortKey;
@@ -1963,395 +1107,559 @@
       state.page = 1;
       render();
     });
-
-    selectAll.addEventListener('change', () => {
-      const rows = visibleRows();
-      const start = (state.page - 1) * state.pageSize;
-      rows.slice(start, start + state.pageSize).forEach((r) => {
-        if (selectAll.checked) state.selected.add(r.sku);
-        else state.selected.delete(r.sku);
-      });
-      render();
-    });
-
     pager.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-page]');
       if (!b || b.disabled) return;
       state.page = Number(b.dataset.page);
       render();
     });
-
-    $('#inventory-search').addEventListener('input', (e) => {
-      state.query = e.target.value.trim();
+    const search = $('input[type="search"]', root);
+    if (search) search.addEventListener('input', () => { state.query = search.value.trim(); state.page = 1; render(); });
+    $$('select[data-filter]', root).forEach((sel) => sel.addEventListener('change', () => {
+      state.filters[sel.dataset.filter] = sel.value;
       state.page = 1;
       render();
-    });
-    $('#inventory-page-size').addEventListener('change', (e) => {
+    }));
+    $('[data-testid="' + prefix + '-page-size-select"]', root).addEventListener('change', (e) => {
       state.pageSize = Number(e.target.value);
       state.page = 1;
       render();
     });
-
-    tbody.addEventListener('change', (e) => {
-      if (e.target.dataset.action !== 'select') return;
-      const sku = e.target.closest('tr').dataset.sku;
-      if (e.target.checked) state.selected.add(sku);
-      else state.selected.delete(sku);
-      render();
-    });
-
-    tbody.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-action]');
-      if (!b) return;
-      const sku = b.closest('tr').dataset.sku;
-      const row = findRow(sku);
-      switch (b.dataset.action) {
-        case 'view': {
-          const [statusText] = statusOf(row);
-          $('#inventory-view-title').textContent = row.name;
-          $('#inventory-view-body').innerHTML = [
-            ['SKU', row.sku], ['Name', esc(row.name)], ['Category', esc(CATEGORY_LABELS[row.category])],
-            ['Stock', row.stock], ['Price', money(row.price)], ['Status', statusText], ['Last updated', row.updated],
-          ].map(([k, v]) => '<tr><td class="muted">' + k + '</td><td data-testid="inventory-view-' + k.toLowerCase().replace(/\s+/g, '-') + '">' + v + '</td></tr>').join('');
-          viewModal.showModal();
-          break;
-        }
-        case 'edit':
-          state.editing = sku;
-          render();
-          $('#edit-name-' + sku).focus();
-          break;
-        case 'cancel':
-          state.editing = null;
-          render();
-          break;
-        case 'save': {
-          const nameEl = $('#edit-name-' + sku);
-          const stockEl = $('#edit-stock-' + sku);
-          const priceEl = $('#edit-price-' + sku);
-          const name = nameEl.value.trim();
-          const stock = Number(stockEl.value);
-          const price = Number(priceEl.value);
-          const bad = [
-            [nameEl, !name], [stockEl, !Number.isInteger(stock) || stock < 0], [priceEl, !(price > 0)],
-          ];
-          bad.forEach(([el, invalid]) => el.setAttribute('aria-invalid', String(invalid)));
-          if (bad.some(([, invalid]) => invalid)) {
-            toast('Fix the highlighted fields: name required, stock ≥ 0 (whole number), price > 0.', 'error');
-            return;
-          }
-          Object.assign(row, { name, stock, price: round2(price), updated: today() });
-          state.editing = null;
-          persist();
-          render();
-          toast(sku + ' saved', 'success');
-          break;
-        }
-        case 'delete':
-          state.pendingDelete = [sku];
-          $('#inventory-delete-text').textContent = 'Delete ' + sku + ' (' + row.name + ')? This cannot be undone.';
-          deleteModal.returnValue = '';
-          deleteModal.showModal();
-          break;
-        default:
-      }
-    });
-
-    tbody.addEventListener('keydown', (e) => {
-      if (!state.editing || !e.target.matches('input.input')) return;
-      if (e.key === 'Enter') $('[data-action="save"]', e.target.closest('tr')).click();
-      if (e.key === 'Escape') $('[data-action="cancel"]', e.target.closest('tr')).click();
-    });
-
-    bulkBtn.addEventListener('click', () => {
-      const skus = Array.from(state.selected);
-      if (!window.confirm('Delete ' + skus.length + ' selected item(s)?')) return;
-      state.rows = state.rows.filter((r) => !state.selected.has(r.sku));
-      state.selected.clear();
-      persist();
-      render();
-      toast('Deleted ' + skus.length + ' item(s)', 'success');
-    });
-
-    deleteModal.addEventListener('close', () => {
-      if (deleteModal.returnValue === 'confirm' && state.pendingDelete) {
-        const skus = state.pendingDelete;
-        state.rows = state.rows.filter((r) => !skus.includes(r.sku));
-        skus.forEach((s) => state.selected.delete(s));
-        persist();
+    if (selectAll) {
+      selectAll.addEventListener('change', () => {
+        pageRows().page.forEach((r) => {
+          if (selectAll.checked) state.selected.add(rowKey(r));
+          else state.selected.delete(rowKey(r));
+        });
         render();
-        toast(skus.join(', ') + ' deleted', 'success');
-      }
-      state.pendingDelete = null;
-    });
+      });
+      tbody.addEventListener('change', (e) => {
+        if (!e.target.matches('[data-row-select]')) return;
+        const key = e.target.closest('tr').dataset.key;
+        if (e.target.checked) state.selected.add(key);
+        else state.selected.delete(key);
+        render();
+      });
+    }
 
-    $$('[data-close]', viewModal).forEach((b) => b.addEventListener('click', () => viewModal.close()));
-
-    $('#inventory-reset').addEventListener('click', () => {
-      store.remove(KEYS.inventory);
-      Object.assign(state, { rows: generateInventory(), query: '', sortKey: null, sortDir: 'asc', page: 1, editing: null });
-      state.selected.clear();
-      $('#inventory-search').value = '';
-      render();
-      toast('Inventory reset', 'info');
-    });
-
-    render();
+    return api;
   }
 
-  // ---- Drag-and-drop wishlist ---------------------------------------------
-
-  function initWishlistDnD() {
-    const avail = $('#dnd-available');
-    const wish = $('#dnd-wishlist');
-
-    const getIds = () => store.get(KEYS.wishlist, []).filter((id) => getProduct(id));
-
-    function itemHtml(p, inWish, i, total) {
-      const controls = inWish
-        ? '<button type="button" class="btn btn-sm btn-ghost" data-action="up" data-testid="dnd-item-up" aria-label="Move ' + esc(p.name) + ' up"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-          '<button type="button" class="btn btn-sm btn-ghost" data-action="down" data-testid="dnd-item-down" aria-label="Move ' + esc(p.name) + ' down"' + (i === total - 1 ? ' disabled' : '') + '>↓</button>' +
-          '<button type="button" class="btn btn-sm btn-ghost" data-action="remove" data-testid="dnd-item-remove" aria-label="Remove ' + esc(p.name) + ' from wishlist">✕</button>'
-        : '<button type="button" class="btn btn-sm btn-ghost" data-action="add" data-testid="dnd-item-add" aria-label="Add ' + esc(p.name) + ' to wishlist">♡ Add</button>';
-      return '<li class="dnd-item" draggable="true" data-id="' + p.id + '" id="dnd-item-' + p.id + '" data-testid="dnd-item">' +
-        '<span class="drag-handle" aria-hidden="true">⠿</span><span aria-hidden="true">' + p.emoji + '</span>' +
-        '<span class="name" data-testid="dnd-item-name">' + esc(p.name) + '</span>' + controls + '</li>';
-    }
-
-    function render() {
-      const ids = getIds();
-      const others = PRODUCTS.filter((p) => !ids.includes(p.id));
-      wish.innerHTML = ids.map((id, i) => itemHtml(getProduct(id), true, i, ids.length)).join('');
-      avail.innerHTML = others.map((p, i) => itemHtml(p, false, i, others.length)).join('');
-      $('#dnd-wishlist-count').textContent = String(ids.length);
-      $('#dnd-available-count').textContent = String(others.length);
-      $('#dnd-wishlist-order').textContent = ids.length ? ids.map((id) => getProduct(id).name).join(' > ') : 'empty';
-      wish.dataset.order = ids.join(',');
-    }
-
-    function save(ids) {
-      store.set(KEYS.wishlist, ids);
-      render();
-    }
-
-    makeSortable([avail, wish], () => save($$(':scope > li', wish).map((li) => Number(li.dataset.id))));
-
-    [avail, wish].forEach((list) => list.addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-action]');
-      if (!b) return;
-      const id = Number(b.closest('li').dataset.id);
-      const ids = getIds();
-      const i = ids.indexOf(id);
-      if (b.dataset.action === 'add') save(ids.concat(id));
-      if (b.dataset.action === 'remove') save(ids.filter((x) => x !== id));
-      if (b.dataset.action === 'up' && i > 0) { [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]]; save(ids); }
-      if (b.dataset.action === 'down' && i < ids.length - 1) { [ids[i + 1], ids[i]] = [ids[i], ids[i + 1]]; save(ids); }
-    }));
-
-    $('#dnd-reset').addEventListener('click', () => save([]));
-    window.addEventListener('storage', (e) => { if (e.key === KEYS.wishlist) render(); });
-    render();
-  }
-
-  // ---- Alerts, dialogs, overlays ------------------------------------------
-
-  function initDialogs() {
-    const out = $('#pg-dialog-result');
-    $('#pg-alert-btn').addEventListener('click', () => {
-      window.alert('Hello from ShopLab! This is a native alert.');
-      out.textContent = 'Result: alert accepted';
-    });
-    $('#pg-confirm-btn').addEventListener('click', () => {
-      const ok = window.confirm('Do you want to proceed?');
-      out.textContent = 'Result: confirm ' + (ok ? 'accepted' : 'dismissed');
-    });
-    $('#pg-prompt-btn').addEventListener('click', () => {
-      const v = window.prompt('What is your name?', 'Tester');
-      out.textContent = v === null ? 'Result: prompt dismissed' : 'Result: prompt returned "' + v + '"';
-    });
-
-    // <dialog> with method="dialog" form
-    const dialog = $('#pg-dialog');
-    $('#pg-open-dialog').addEventListener('click', () => {
-      dialog.returnValue = '';
-      $('#pg-dialog-email').value = '';
-      dialog.showModal();
-    });
-    dialog.addEventListener('close', () => {
-      const email = $('#pg-dialog-email').value.trim();
-      $('#pg-html-dialog-result').textContent = dialog.returnValue === 'ok'
-        ? 'Result: subscribed ' + (email || '(no email)')
-        : 'Result: ' + (dialog.returnValue || 'dismissed');
-    });
-
-    // Plain div overlay
-    const overlay = $('#pg-overlay');
-    const overlayOut = $('#pg-overlay-result');
-    let lastFocus = null;
-    function closeOverlay(result) {
-      overlay.hidden = true;
-      overlayOut.textContent = 'Result: ' + result;
-      if (lastFocus) lastFocus.focus();
-    }
-    $('#pg-open-overlay').addEventListener('click', (e) => {
-      lastFocus = e.currentTarget;
-      overlay.hidden = false;
-      $('#pg-overlay-accept').focus();
-    });
-    $('#pg-overlay-accept').addEventListener('click', () => closeOverlay('accepted'));
-    $('#pg-overlay-reject').addEventListener('click', () => closeOverlay('rejected'));
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeOverlay('dismissed (backdrop)'); });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !overlay.hidden) closeOverlay('dismissed (Escape)');
-    });
-
-    $('#pg-toast-success').addEventListener('click', () => toast('Everything worked!', 'success'));
-    $('#pg-toast-error').addEventListener('click', () => toast('Something went wrong.', 'error'));
-  }
-
-  // ---- Waits & dynamic content --------------------------------------------
-
-  function initWaits() {
-    // Delayed element
-    const loadBtn = $('#pg-load-delayed');
-    loadBtn.addEventListener('click', async () => {
-      const container = $('#pg-delayed-container');
-      container.innerHTML = '';
-      $('#pg-delayed-spinner').hidden = false;
-      setBusy(loadBtn, true, 'Loading…');
-      await wait(3000);
-      setBusy(loadBtn, false);
-      $('#pg-delayed-spinner').hidden = true;
-      container.innerHTML = '<div class="alert alert-success" id="pg-delayed-content" data-testid="delayed-content">Data loaded successfully ✓</div>';
-    });
-
-    // Countdown-enabled button
-    const startBtn = $('#pg-start-countdown');
-    const target = $('#pg-countdown-target');
-    const cdOut = $('#pg-countdown-output');
-    startBtn.addEventListener('click', () => {
-      let left = 5;
-      startBtn.disabled = true;
-      target.disabled = true;
-      target.textContent = 'Locked';
-      cdOut.textContent = 'Unlocks in ' + left + 's';
-      const timer = setInterval(() => {
-        left -= 1;
-        if (left > 0) { cdOut.textContent = 'Unlocks in ' + left + 's'; return; }
-        clearInterval(timer);
-        target.disabled = false;
-        target.textContent = 'Click me!';
-        cdOut.textContent = 'Unlocked';
-        startBtn.disabled = false;
-      }, 1000);
-    });
-    target.addEventListener('click', () => { cdOut.textContent = 'Target clicked ✓'; });
-
-    // Visibility toggle
-    const toggleBtn = $('#pg-toggle-visibility');
-    const toggleTarget = $('#pg-toggle-target');
-    toggleBtn.addEventListener('click', () => {
-      toggleTarget.hidden = !toggleTarget.hidden;
-      toggleBtn.textContent = toggleTarget.hidden ? 'Show element' : 'Hide element';
-      toggleBtn.setAttribute('aria-expanded', String(!toggleTarget.hidden));
-    });
-
-    // Text that changes after a delay
-    const jobBtn = $('#pg-change-text');
-    const status = $('#pg-status-text');
-    jobBtn.addEventListener('click', () => {
-      jobBtn.disabled = true;
-      status.textContent = 'Status: running…';
-      status.dataset.status = 'running';
-      setTimeout(() => {
-        status.textContent = 'Status: completed ✓';
-        status.dataset.status = 'completed';
-        jobBtn.disabled = false;
-      }, 2000);
-    });
-
-    // Dynamic id
-    const dyn = $('[data-testid="dynamic-id-btn"]');
-    dyn.id = 'dyn-' + Math.random().toString(36).slice(2, 8);
-    $('#pg-dynamic-output').textContent = 'id: ' + dyn.id;
-    dyn.addEventListener('click', () => { $('#pg-dynamic-output').textContent = 'Clicked element with id="' + dyn.id + '"'; });
-
-    // Stale element list
-    let renders = 0;
-    const staleList = $('#pg-stale-list');
-    function renderStale() {
-      renders += 1;
-      staleList.innerHTML = ['Alpha', 'Bravo', 'Charlie'].map((n) =>
-        '<li data-testid="stale-item" data-render="' + renders + '">' + n + ' (render #' + renders + ')</li>').join('');
-    }
-    $('#pg-rerender').addEventListener('click', renderStale);
-    renderStale();
-  }
-
-  // ---- Mouse & keyboard ----------------------------------------------------
-
-  function initMouseKeyboard() {
-    $('#pg-hover-menu').addEventListener('click', (e) => {
-      const a = e.target.closest('a');
-      if (!a) return;
-      e.preventDefault();
-      $('#pg-hover-output').textContent = 'Clicked: ' + a.textContent;
-    });
-
-    let dbl = 0;
-    $('#pg-dblclick').addEventListener('dblclick', () => {
-      dbl += 1;
-      $('#pg-dblclick-output').textContent = 'Double-clicks: ' + dbl;
-    });
-
-    // Custom context menu
+  /**
+   * Custom right-click menu for rows inside `scope` matching `rowSelector`.
+   * getItems(row) → [{ action, label, disabled? }]; onSelect(action, row).
+   */
+  function attachContextMenu(scope, rowSelector, getItems, onSelect, testid) {
     const menu = document.createElement('ul');
     menu.className = 'context-menu';
-    menu.id = 'pg-context-menu';
     menu.setAttribute('role', 'menu');
-    menu.dataset.testid = 'contextmenu-menu';
+    menu.dataset.testid = testid;
     menu.hidden = true;
-    menu.innerHTML = ['copy', 'edit', 'delete'].map((a) =>
-      '<li role="none"><button type="button" role="menuitem" data-menu-action="' + a + '" data-testid="contextmenu-item-' + a + '">' + a[0].toUpperCase() + a.slice(1) + '</button></li>').join('');
     document.body.appendChild(menu);
-    const hideMenu = () => { menu.hidden = true; };
-    $('#pg-contextmenu').addEventListener('contextmenu', (e) => {
+    let row = null;
+    const hide = () => { menu.hidden = true; row = null; };
+
+    scope.addEventListener('contextmenu', (e) => {
+      const r = e.target.closest(rowSelector);
+      if (!r) return;
       e.preventDefault();
+      row = r;
+      menu.innerHTML = getItems(r).map((it) =>
+        '<li role="none"><button type="button" role="menuitem" data-menu-action="' + it.action + '" data-testid="' + testid + '-item-' + it.action + '"' + (it.disabled ? ' disabled' : '') + '>' + esc(it.label) + '</button></li>').join('');
       menu.hidden = false;
-      menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
-      menu.style.top = Math.min(e.clientY, window.innerHeight - 140) + 'px';
-      $('button', menu).focus();
+      menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+      menu.style.top = Math.min(e.clientY, window.innerHeight - menu.offsetHeight - 8) + 'px';
+      const firstBtn = $('button:not([disabled])', menu);
+      if (firstBtn) firstBtn.focus();
     });
     menu.addEventListener('click', (e) => {
       const b = e.target.closest('[data-menu-action]');
+      if (!b || b.disabled) return;
+      const target = row;
+      hide();
+      onSelect(b.dataset.menuAction, target);
+    });
+    document.addEventListener('click', (e) => { if (!menu.contains(e.target)) hide(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+    window.addEventListener('scroll', hide, { passive: true });
+  }
+
+  /** Accessible tab set: [role=tab][data-tab] buttons with aria-controls panels. */
+  function initTabs(root, { initial, onChange } = {}) {
+    const tabs = $$('[role="tab"]', root);
+    function select(name, focus) {
+      if (!tabs.some((t) => t.dataset.tab === name)) name = tabs[0].dataset.tab;
+      tabs.forEach((t) => {
+        const on = t.dataset.tab === name;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const panel = document.getElementById(t.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !on;
+        if (on && focus) t.focus();
+      });
+      if (onChange) onChange(name);
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(t.dataset.tab));
+      t.addEventListener('keydown', (e) => {
+        const map = { ArrowRight: i + 1, ArrowLeft: i - 1, ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: tabs.length - 1 };
+        if (!(e.key in map)) return;
+        e.preventDefault();
+        select(tabs[(map[e.key] + tabs.length) % tabs.length].dataset.tab, true);
+      });
+    });
+    select(initial || tabs[0].dataset.tab);
+    return { select };
+  }
+
+  /** Product card markup shared by catalog, recommendations and recently viewed. */
+  function productCardHtml(p, { qty = 1, compact = false } = {}) {
+    const out = p.stock <= 0;
+    const wished = Wishlist.has(p.id);
+    const idp = compact ? 'mini-' : '';
+    const badge = p.tags.includes('sale') ? '<span class="badge badge-sale" data-testid="product-badge">Sale</span>'
+      : p.tags.includes('new') ? '<span class="badge badge-new" data-testid="product-badge">New</span>' : '';
+    const stockNote = out ? '<p class="stock-note out" data-testid="product-stock-status">Out of stock</p>'
+      : p.stock <= 5 ? '<p class="stock-note low" data-testid="product-stock-status">Only ' + p.stock + ' left</p>'
+      : '<p class="stock-note muted" data-testid="product-stock-status">In stock</p>';
+    const needsOptions = p.requiresPrescription;
+    const addBtn = out
+      ? '<a class="btn" href="product-detail.html?id=' + p.id + '" id="add-to-cart-' + p.id + '" data-testid="product-notify-link" aria-label="Get notified when ' + esc(p.name) + ' is back">Notify me</a>'
+      : needsOptions
+        ? '<a class="btn btn-primary" href="product-detail.html?id=' + p.id + '" id="add-to-cart-' + p.id + '" data-testid="product-choose-options" aria-label="Choose options for ' + esc(p.name) + '">Choose options</a>'
+        : '<button type="button" class="btn btn-primary" data-action="add" id="add-to-cart-' + p.id + '" data-testid="product-add-to-cart" aria-label="Add ' + esc(p.name) + ' to cart">Add to Cart</button>';
+    return (
+      '<article class="product-card' + (out ? ' is-out-of-stock' : '') + (compact ? ' is-compact' : '') + '" id="' + idp + 'product-card-' + p.id + '" data-testid="product-card" data-product-id="' + p.id + '" aria-labelledby="' + idp + 'product-title-' + p.id + '">' +
+        '<div class="product-media-wrap">' +
+          '<a href="product-detail.html?id=' + p.id + '" class="product-media" data-testid="product-image-link" tabindex="-1" aria-hidden="true">' +
+            '<img src="' + productImage(p) + '" alt="' + esc(p.name) + '" data-testid="product-image" loading="lazy" width="400" height="400">' + badge +
+          '</a>' +
+          '<button type="button" class="card-wish" data-action="wish" data-testid="product-wishlist-toggle" aria-pressed="' + wished + '" aria-label="' + (wished ? 'Remove ' : 'Add ') + esc(p.name) + (wished ? ' from' : ' to') + ' wishlist">' + (wished ? '♥' : '♡') + '</button>' +
+          (compact ? '' : '<button type="button" class="card-quick-view" data-action="quick-view" data-testid="product-quick-view" aria-label="Quick view ' + esc(p.name) + '">Quick view</button>') +
+        '</div>' +
+        '<div class="product-body">' +
+          '<p class="product-category" data-testid="product-category">' + esc(CATEGORY_LABELS[p.category]) + '</p>' +
+          '<h3 class="product-title" id="' + idp + 'product-title-' + p.id + '"><a href="product-detail.html?id=' + p.id + '" data-testid="product-title-link">' + esc(p.name) + '</a></h3>' +
+          '<div class="rating" aria-label="Rated ' + p.rating + ' out of 5" data-testid="product-rating">' + stars(p.rating) + '<span>' + p.rating.toFixed(1) + '</span></div>' +
+          '<div class="price-row"><p class="price" data-testid="product-price">' + money(p.price) + '</p>' +
+            (p.compareAt ? '<span class="compare-price" data-testid="product-compare-price">' + money(p.compareAt) + '</span>' : '') + '</div>' +
+          (compact ? '' :
+            stockNote +
+            '<div class="color-dots" data-testid="product-colors" aria-label="' + plural(p.colors.length, 'colour') + '">' +
+              p.colors.map((c) => '<span class="swatch-dot" title="' + esc(c.name) + '" style="background:' + c.hex + '"></span>').join('') +
+              '<span class="muted small">' + plural(p.colors.length, 'colour') + '</span></div>' +
+            '<div class="card-actions">' +
+              (out || needsOptions ? '' :
+                '<div class="qty" role="group" aria-label="Quantity for ' + esc(p.name) + '" data-testid="product-qty">' +
+                  '<button type="button" data-action="dec" data-testid="product-qty-decrement" aria-label="Decrease quantity for ' + esc(p.name) + '"' + (qty <= 1 ? ' disabled' : '') + '>−</button>' +
+                  '<input type="number" id="qty-' + p.id + '" value="' + qty + '" min="1" max="' + p.stock + '" data-testid="product-qty-input" aria-label="Quantity for ' + esc(p.name) + '">' +
+                  '<button type="button" data-action="inc" data-testid="product-qty-increment" aria-label="Increase quantity for ' + esc(p.name) + '"' + (qty >= p.stock ? ' disabled' : '') + '>+</button>' +
+                '</div>') +
+              addBtn +
+            '</div>' +
+            '<div class="card-links">' +
+              '<a href="product-detail.html?id=' + p.id + '&tab=reviews" target="_blank" rel="noopener" data-testid="product-reviews-link" aria-label="Read reviews for ' + esc(p.name) + ' (opens in new tab)">Read Reviews ↗</a>' +
+              '<a href="product-detail.html?id=' + p.id + '&tab=terms" target="_blank" rel="noopener" data-testid="product-vendor-terms-link" aria-label="Vendor terms for ' + esc(p.name) + ' (opens in new tab)">Vendor Terms ↗</a>' +
+            '</div>') +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  /** Wires wishlist hearts inside any container of product cards. */
+  function bindCardWishlist(container) {
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="wish"]');
+      if (!btn) return;
+      const card = btn.closest('[data-testid="product-card"]');
+      const p = getProduct(card.dataset.productId);
+      const on = Wishlist.toggle(p.id);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', (on ? 'Remove ' : 'Add ') + p.name + (on ? ' from' : ' to') + ' wishlist');
+      btn.textContent = on ? '♥' : '♡';
+      toast(on ? 'Saved to your wishlist' : 'Removed from your wishlist', 'info');
+    });
+  }
+
+  // ==========================================================================
+  // Site shell: header (search, mega menu, account menu), footer, cart
+  // drawer, cookie consent, back-to-top, keyboard shortcut.
+  // ==========================================================================
+
+  const ICONS = {
+    search: '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+    bag: '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 7h12l-1 13H7L6 7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>',
+    heart: '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
+    chevron: '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  };
+
+  function headerHtml(page, session) {
+    const navLink = (href, label, id, current) =>
+      '<a href="' + href + '" id="' + id + '" data-testid="' + id + '-link"' + (current ? ' aria-current="page"' : '') + '>' + label + '</a>';
+    const featured = Products.visible().filter((p) => p.tags.includes('sale')).slice(0, 2);
+    const isAdmin = session && session.role === 'admin';
+    return (
+      '<div class="announcement-bar" data-testid="announcement-bar" role="region" aria-label="Announcements">' +
+        '<span>Free shipping on orders over $100</span><span class="dot" aria-hidden="true">·</span><span>Use code <strong>SAVE10</strong> for 10% off</span>' +
+      '</div>' +
+      '<header class="site-header" data-testid="site-header">' +
+        '<div class="container header-inner">' +
+          '<button type="button" class="icon-btn menu-toggle" id="menu-toggle" data-testid="header-menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="main-nav">☰</button>' +
+          '<a href="index.html" class="brand" id="brand-link" data-testid="header-brand-link" aria-label="ShopLab home"><span class="brand-mark" aria-hidden="true">S</span><span>ShopLab</span></a>' +
+          '<nav class="main-nav" id="main-nav" aria-label="Main navigation" data-testid="header-nav">' +
+            navLink('index.html', 'Shop', 'nav-shop', page === 'catalog') +
+            '<div class="nav-item has-mega" data-testid="nav-categories">' +
+              '<button type="button" class="nav-trigger" id="nav-categories-btn" data-testid="nav-categories-btn" aria-haspopup="true" aria-expanded="false" aria-controls="mega-menu">Categories ' + ICONS.chevron + '</button>' +
+              '<div class="mega-menu" id="mega-menu" data-testid="mega-menu" role="menu">' +
+                '<div class="mega-cats">' +
+                  Object.keys(CATEGORY_LABELS).map((k) =>
+                    '<a href="index.html?category=' + k + '#catalog" role="menuitem" data-testid="mega-menu-' + k + '"><span aria-hidden="true">' + CATEGORY_EMOJI[k] + '</span>' + esc(CATEGORY_LABELS[k]) + '</a>').join('') +
+                '</div>' +
+                '<div class="mega-featured">' +
+                  '<p class="eyebrow">On sale now</p>' +
+                  featured.map((p) => '<a href="product-detail.html?id=' + p.id + '" class="mega-product" role="menuitem" data-testid="mega-menu-featured">' +
+                    '<img src="' + productImage(p) + '" alt="" width="56" height="56"><span><strong>' + esc(p.name) + '</strong><span class="price-sale">' + money(p.price) + '</span></span></a>').join('') +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<a href="index.html?tag=sale#catalog" id="nav-deals" data-testid="nav-deals-link">Deals</a>' +
+            navLink('account.html#orders', 'Orders', 'nav-orders', page === 'account') +
+            (isAdmin ? navLink('admin.html', 'Admin', 'nav-admin', page === 'admin') : '') +
+          '</nav>' +
+          '<div class="header-search combobox" role="search" data-testid="header-search">' +
+            '<label for="header-search-input" class="visually-hidden">Search products</label>' +
+            '<span class="search-icon">' + ICONS.search + '</span>' +
+            '<input type="search" class="input" id="header-search-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="header-search-listbox" autocomplete="off" placeholder="Search products…" data-testid="header-search-input">' +
+            '<kbd class="search-kbd" aria-hidden="true">/</kbd>' +
+            '<ul class="listbox" id="header-search-listbox" role="listbox" aria-label="Product suggestions" data-testid="header-search-listbox" hidden></ul>' +
+          '</div>' +
+          '<div class="header-actions">' +
+            '<a href="account.html#wishlist" class="icon-btn" id="header-wishlist" data-testid="header-wishlist-link" aria-label="Wishlist">' + ICONS.heart +
+              '<span class="icon-count" data-testid="header-wishlist-count">0</span></a>' +
+            '<div class="nav-item has-dropdown account-menu" data-testid="header-account">' +
+              '<button type="button" class="icon-btn account-btn" id="header-account-btn" data-testid="header-account-btn" aria-haspopup="true" aria-expanded="false" aria-controls="header-account-menu" aria-label="Account menu">' +
+                '<span class="avatar" aria-hidden="true">' + esc((session ? session.user : '?').charAt(0).toUpperCase()) + '</span>' +
+              '</button>' +
+              '<div class="dropdown" id="header-account-menu" data-testid="header-account-menu" role="menu">' +
+                '<div class="dropdown-head"><strong id="header-username" data-testid="header-username">' + esc(session ? session.user : '') + '</strong>' +
+                  '<span class="muted small" data-testid="header-user-email">' + esc(session ? session.email : '') + '</span></div>' +
+                '<a href="account.html#orders" role="menuitem" data-testid="account-menu-orders">📦 My orders</a>' +
+                '<a href="account.html#wishlist" role="menuitem" data-testid="account-menu-wishlist">♡ Wishlist</a>' +
+                '<a href="account.html#returns" role="menuitem" data-testid="account-menu-returns">↩︎ Returns</a>' +
+                '<a href="account.html#profile" role="menuitem" data-testid="account-menu-profile">👤 Profile</a>' +
+                (isAdmin ? '<a href="admin.html" role="menuitem" data-testid="account-menu-admin">🛠 Admin console</a>' : '') +
+                '<button type="button" role="menuitem" id="logout-btn" data-testid="header-logout-btn">Log out</button>' +
+              '</div>' +
+            '</div>' +
+            '<button type="button" class="icon-btn cart-btn" id="header-cart-btn" data-testid="header-cart-btn" aria-label="Open cart" aria-controls="cart-drawer" aria-expanded="false">' + ICONS.bag +
+              '<span class="icon-count cart-count" id="cart-count" data-testid="header-cart-count" aria-live="polite">0</span></button>' +
+          '</div>' +
+        '</div>' +
+      '</header>'
+    );
+  }
+
+  function footerHtml() {
+    return (
+      '<footer class="site-footer" data-testid="site-footer">' +
+        '<div class="container footer-grid">' +
+          '<div class="footer-brand">' +
+            '<a href="index.html" class="brand"><span class="brand-mark" aria-hidden="true">S</span><span>ShopLab</span></a>' +
+            '<p class="muted small">A realistic demo store for practising end-to-end UI automation. No real payments, no real shipping.</p>' +
+            '<shop-newsletter data-testid="shadow-host"></shop-newsletter>' +
+          '</div>' +
+          '<div class="footer-col"><h3>Shop</h3>' + Object.keys(CATEGORY_LABELS).map((k) => '<a href="index.html?category=' + k + '#catalog" data-testid="footer-category-' + k + '">' + esc(CATEGORY_LABELS[k]) + '</a>').join('') + '</div>' +
+          '<div class="footer-col"><h3>Account</h3>' +
+            '<a href="account.html#orders" data-testid="footer-orders-link">Order history</a>' +
+            '<a href="account.html#wishlist" data-testid="footer-wishlist-link">Wishlist</a>' +
+            '<a href="account.html#returns" data-testid="footer-returns-link">Returns</a>' +
+            '<a href="account.html#profile" data-testid="footer-profile-link">Profile</a>' +
+            '<a href="checkout.html" data-testid="footer-cart-link">Cart & checkout</a></div>' +
+          '<div class="footer-col"><h3>Help</h3>' +
+            '<a href="product-detail.html?id=1&tab=shipping" data-testid="footer-shipping-link">Shipping & returns</a>' +
+            '<a href="product-detail.html?id=1&tab=terms" data-testid="footer-terms-link">Terms of sale</a>' +
+            '<button type="button" class="link-btn" id="cookie-preferences-link" data-testid="footer-cookie-preferences">Cookie preferences</button>' +
+            '<button type="button" class="link-btn" id="reset-demo-state" data-testid="footer-reset-state">Reset demo data</button></div>' +
+        '</div>' +
+        '<div class="container footer-bottom"><span>© 2026 ShopLab · Built for Playwright, Cypress &amp; Selenium practice</span><span>Test card 4242 4242 4242 4242</span></div>' +
+      '</footer>'
+    );
+  }
+
+  function drawerHtml() {
+    return (
+      '<div class="drawer-backdrop" id="cart-drawer-backdrop" data-testid="cart-drawer-backdrop" hidden></div>' +
+      '<aside class="drawer" id="cart-drawer" data-testid="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-drawer-title" aria-hidden="true" tabindex="-1">' +
+        '<div class="drawer-head"><h2 id="cart-drawer-title">Your cart <span class="muted" data-testid="cart-drawer-count"></span></h2>' +
+          '<button type="button" class="modal-close" id="cart-drawer-close" data-testid="cart-drawer-close" aria-label="Close cart">×</button></div>' +
+        '<div class="drawer-shipping" data-testid="cart-drawer-shipping">' +
+          '<p class="small" id="drawer-shipping-text" data-testid="cart-drawer-shipping-text"></p>' +
+          '<div class="progress" role="progressbar" aria-label="Progress to free shipping" aria-valuemin="0" aria-valuemax="100" data-testid="cart-drawer-shipping-progress"><div class="progress-bar"></div></div>' +
+        '</div>' +
+        '<ul class="drawer-lines" id="cart-drawer-lines" data-testid="cart-drawer-lines"></ul>' +
+        '<div class="drawer-empty" data-testid="cart-drawer-empty" hidden><span class="emoji" aria-hidden="true">🛍️</span><p>Your cart is empty.</p>' +
+          '<a href="index.html#catalog" class="btn btn-primary" data-testid="cart-drawer-shop">Start shopping</a></div>' +
+        '<div class="drawer-foot">' +
+          '<div class="drawer-subtotal"><span>Subtotal</span><strong data-testid="cart-drawer-subtotal">$0.00</strong></div>' +
+          '<p class="small muted">Taxes and shipping calculated at checkout.</p>' +
+          '<a href="checkout.html" class="btn btn-primary btn-lg btn-block" id="cart-drawer-checkout" data-testid="cart-drawer-checkout">Checkout</a>' +
+          '<button type="button" class="btn btn-ghost btn-block" id="cart-drawer-continue" data-testid="cart-drawer-continue">Continue shopping</button>' +
+        '</div>' +
+      '</aside>'
+    );
+  }
+
+  function cookieHtml() {
+    return (
+      '<section class="cookie-banner" id="cookie-banner" data-testid="cookie-banner" role="region" aria-label="Cookie consent" hidden>' +
+        '<div><strong>🍪 We use cookies</strong><p class="small muted">To keep you signed in, remember your cart and improve the store. Choose what you allow.</p></div>' +
+        '<div class="row">' +
+          '<button type="button" class="btn btn-sm" id="cookie-manage" data-testid="cookie-manage-btn">Manage</button>' +
+          '<button type="button" class="btn btn-sm" id="cookie-reject" data-testid="cookie-reject-btn">Reject non-essential</button>' +
+          '<button type="button" class="btn btn-sm btn-primary" id="cookie-accept" data-testid="cookie-accept-btn">Accept all</button>' +
+        '</div>' +
+      '</section>' +
+      '<dialog class="modal" id="cookie-modal" data-testid="cookie-preferences-modal" aria-labelledby="cookie-modal-title">' +
+        '<form method="dialog">' +
+          '<div class="modal-header"><h2 id="cookie-modal-title">Cookie preferences</h2><button type="submit" value="cancel" class="modal-close" aria-label="Close" data-testid="cookie-modal-close">×</button></div>' +
+          '<div class="modal-body stack">' +
+            '<label class="switch-row"><span><strong>Essential</strong><br><span class="small muted">Sign-in, cart and checkout. Always on.</span></span><input type="checkbox" class="switch" role="switch" checked disabled data-testid="cookie-essential-switch"></label>' +
+            '<label class="switch-row"><span><strong>Analytics</strong><br><span class="small muted">Helps us understand how the store is used.</span></span><input type="checkbox" class="switch" role="switch" id="cookie-analytics" data-testid="cookie-analytics-switch"></label>' +
+            '<label class="switch-row"><span><strong>Marketing</strong><br><span class="small muted">Personalised offers and recommendations.</span></span><input type="checkbox" class="switch" role="switch" id="cookie-marketing" data-testid="cookie-marketing-switch"></label>' +
+          '</div>' +
+          '<div class="modal-footer"><button type="submit" value="save" class="btn btn-primary" data-testid="cookie-save-btn">Save preferences</button></div>' +
+        '</form>' +
+      '</dialog>'
+    );
+  }
+
+  function updateBadges(bump) {
+    $$('[data-testid="header-cart-count"]').forEach((el) => {
+      const n = Cart.count();
+      el.textContent = String(n);
+      el.dataset.count = String(n);
+      if (bump) {
+        el.classList.remove('bump');
+        void el.offsetWidth; // restart the animation
+        el.classList.add('bump');
+      }
+    });
+    $$('[data-testid="header-wishlist-count"]').forEach((el) => {
+      const n = Wishlist.ids().length;
+      el.textContent = String(n);
+      el.hidden = n === 0;
+    });
+  }
+
+  // ---- Cart drawer ---------------------------------------------------------
+
+  const Drawer = {
+    open() {
+      const d = $('#cart-drawer');
+      if (!d) return;
+      this.render();
+      $('#cart-drawer-backdrop').hidden = false;
+      d.classList.add('is-open');
+      d.setAttribute('aria-hidden', 'false');
+      $('#header-cart-btn').setAttribute('aria-expanded', 'true');
+      document.body.classList.add('has-drawer');
+      d.focus();
+    },
+    close() {
+      const d = $('#cart-drawer');
+      if (!d || !d.classList.contains('is-open')) return;
+      d.classList.remove('is-open');
+      d.setAttribute('aria-hidden', 'true');
+      $('#cart-drawer-backdrop').hidden = true;
+      $('#header-cart-btn').setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('has-drawer');
+    },
+    render() {
+      const d = $('#cart-drawer');
+      if (!d) return;
+      const lines = Cart.lines();
+      const subtotal = Cart.subtotal();
+      $('[data-testid="cart-drawer-count"]', d).textContent = '(' + Cart.count() + ')';
+      $('#cart-drawer-lines').innerHTML = lines.map((l) =>
+        '<li class="drawer-line" data-testid="cart-drawer-line" data-key="' + esc(l.key) + '" data-id="' + l.id + '">' +
+          '<img src="' + productImage(l.product) + '" alt="" width="64" height="64">' +
+          '<div class="drawer-line-info">' +
+            '<a href="product-detail.html?id=' + l.id + '" class="drawer-line-name" data-testid="cart-drawer-line-name">' + esc(l.product.name) + '</a>' +
+            '<span class="small muted" data-testid="cart-drawer-line-meta">' + esc(lineMeta(l)) + '</span>' +
+            '<div class="qty qty-sm" role="group" aria-label="Quantity for ' + esc(l.product.name) + '">' +
+              '<button type="button" data-drawer="dec" data-testid="cart-drawer-qty-decrement" aria-label="Decrease quantity"' + (l.qty <= 1 ? ' disabled' : '') + '>−</button>' +
+              '<input type="number" value="' + l.qty + '" min="1" data-testid="cart-drawer-qty-input" aria-label="Quantity" readonly>' +
+              '<button type="button" data-drawer="inc" data-testid="cart-drawer-qty-increment" aria-label="Increase quantity"' + (Cart.totalFor(l.id) >= l.product.stock ? ' disabled' : '') + '>+</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="drawer-line-end"><strong data-testid="cart-drawer-line-total">' + money(l.total) + '</strong>' +
+            '<button type="button" class="link-btn small" data-drawer="remove" data-testid="cart-drawer-remove" aria-label="Remove ' + esc(l.product.name) + '">Remove</button></div>' +
+        '</li>').join('');
+      $('[data-testid="cart-drawer-empty"]', d).hidden = lines.length > 0;
+      $('.drawer-foot', d).hidden = !lines.length;
+      $('.drawer-shipping', d).hidden = !lines.length;
+      $('[data-testid="cart-drawer-subtotal"]', d).textContent = money(subtotal);
+      const remaining = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+      const pct = Math.min(100, Math.round((subtotal / FREE_SHIPPING_THRESHOLD) * 100));
+      $('#drawer-shipping-text').innerHTML = remaining > 0
+        ? 'You’re <strong>' + money(remaining) + '</strong> away from free shipping'
+        : '🎉 You’ve unlocked <strong>free standard shipping</strong>';
+      const bar = $('[data-testid="cart-drawer-shipping-progress"]', d);
+      bar.setAttribute('aria-valuenow', String(pct));
+      $('.progress-bar', bar).style.width = pct + '%';
+    },
+  };
+
+  function initDrawer() {
+    const d = $('#cart-drawer');
+    $('#header-cart-btn').addEventListener('click', () => Drawer.open());
+    $('#cart-drawer-close').addEventListener('click', () => Drawer.close());
+    $('#cart-drawer-continue').addEventListener('click', () => Drawer.close());
+    $('#cart-drawer-backdrop').addEventListener('click', () => Drawer.close());
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') Drawer.close(); });
+    $('#cart-drawer-lines').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-drawer]');
       if (!b) return;
-      $('#pg-contextmenu-output').textContent = 'Action: ' + b.dataset.menuAction;
-      hideMenu();
+      const key = b.closest('[data-key]').dataset.key;
+      const line = Cart.items().find((l) => l.key === key);
+      if (!line) return;
+      if (b.dataset.drawer === 'inc') Cart.setQty(key, line.qty + 1);
+      if (b.dataset.drawer === 'dec') Cart.setQty(key, line.qty - 1);
+      if (b.dataset.drawer === 'remove') { Cart.remove(key); toast(getProduct(line.id).name + ' removed from cart', 'info'); }
     });
-    document.addEventListener('click', (e) => { if (!menu.contains(e.target)) hideMenu(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideMenu(); });
-    window.addEventListener('scroll', hideMenu, { passive: true });
-
-    $('#pg-key-input').addEventListener('keydown', (e) => {
-      const mods = [e.ctrlKey && 'Control', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Meta'].filter(Boolean);
-      const key = ['Control', 'Alt', 'Shift', 'Meta'].includes(e.key) ? e.key : mods.concat(e.key === ' ' ? 'Space' : e.key).join('+');
-      $('#pg-key-output').textContent = 'Last key: ' + key + ' (code: ' + e.code + ')';
-    });
-
-    $('#pg-scroll-btn').addEventListener('click', () => { $('#pg-scroll-output').textContent = 'Clicked ✓'; });
+    document.addEventListener('cart:change', () => { if (d.classList.contains('is-open')) Drawer.render(); });
   }
 
-  // ---- Shadow DOM, new windows, reset -------------------------------------
+  // ---- Cookie consent ------------------------------------------------------
 
-  function initMisc() {
-    $('#pg-popup-btn').addEventListener('click', () => {
-      const w = window.open('product-detail.html?id=3', 'shoplab-popup', 'width=960,height=720');
-      if (!w) toast('Popup blocked by the browser.', 'error');
+  function initCookies() {
+    const banner = $('#cookie-banner');
+    const modal = $('#cookie-modal');
+    const save = (value) => {
+      store.set(KEYS.consent, value);
+      banner.hidden = true;
+      document.body.classList.remove('has-cookie-banner');
+    };
+    if (!store.get(KEYS.consent, null)) {
+      banner.hidden = false;
+      document.body.classList.add('has-cookie-banner');
+    }
+    $('#cookie-accept').addEventListener('click', () => { save({ analytics: true, marketing: true, choice: 'accepted' }); toast('Cookie preferences saved', 'success'); });
+    $('#cookie-reject').addEventListener('click', () => { save({ analytics: false, marketing: false, choice: 'rejected' }); toast('Only essential cookies will be used', 'info'); });
+    const openPrefs = () => {
+      const c = store.get(KEYS.consent, {}) || {};
+      $('#cookie-analytics').checked = Boolean(c.analytics);
+      $('#cookie-marketing').checked = Boolean(c.marketing);
+      modal.returnValue = '';
+      modal.showModal();
+    };
+    $('#cookie-manage').addEventListener('click', openPrefs);
+    $('#cookie-preferences-link').addEventListener('click', openPrefs);
+    modal.addEventListener('close', () => {
+      if (modal.returnValue !== 'save') return;
+      save({ analytics: $('#cookie-analytics').checked, marketing: $('#cookie-marketing').checked, choice: 'custom' });
+      toast('Cookie preferences saved', 'success');
     });
-    $('#pg-reset-all').addEventListener('click', resetDemoState);
   }
 
-  /** <shop-newsletter>: a custom element with an open shadow root. */
+  // ---- Header behaviour ----------------------------------------------------
+
+  function initHeader() {
+    const nav = $('#main-nav');
+    const toggle = $('#menu-toggle');
+    toggle.addEventListener('click', () => {
+      const open = nav.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', String(open));
+    });
+
+    // Hover menus that also open on click / keyboard (mega menu + account menu).
+    $$('.nav-item.has-mega, .nav-item.has-dropdown').forEach((item) => {
+      const btn = $('button[aria-haspopup]', item);
+      let closeTimer;
+      const set = (open) => {
+        item.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+      };
+      item.addEventListener('mouseenter', () => { clearTimeout(closeTimer); set(true); });
+      item.addEventListener('mouseleave', () => { closeTimer = setTimeout(() => set(false), 150); });
+      // A mouse user has already opened it on hover, so a click shouldn't close it again.
+      btn.addEventListener('click', () => set(item.matches(':hover') || !item.classList.contains('is-open')));
+      item.addEventListener('focusout', (e) => { if (e.relatedTarget && !item.contains(e.relatedTarget)) set(false); });
+      item.addEventListener('keydown', (e) => { if (e.key === 'Escape') { set(false); btn.focus(); } });
+      document.addEventListener('click', (e) => { if (!item.contains(e.target)) set(false); });
+    });
+
+    $('#logout-btn').addEventListener('click', () => Auth.logout());
+    $('#reset-demo-state').addEventListener('click', resetDemoState);
+
+    // Global product search with suggestions.
+    createCombobox({
+      input: $('#header-search-input'),
+      listbox: $('#header-search-listbox'),
+      testid: 'header-search',
+      minChars: 1,
+      limit: 8,
+      options: () => Products.visible().map((p) => ({
+        value: String(p.id), label: p.name, meta: money(p.price), icon: p.emoji,
+        keywords: [p.vendor, CATEGORY_LABELS[p.category], p.tags.join(' ')].join(' '),
+      })),
+      onSelect: (o) => { if (o) location.href = 'product-detail.html?id=' + o.value; },
+      onEnterFreeText: (text) => { location.href = 'index.html?q=' + encodeURIComponent(text) + '#catalog'; },
+    });
+
+    // "/" focuses search (unless typing in a field).
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target.closest && e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      e.preventDefault();
+      $('#header-search-input').focus();
+    });
+
+    // Back to top button appears after scrolling.
+    const top = document.createElement('button');
+    top.type = 'button';
+    top.className = 'back-to-top';
+    top.id = 'back-to-top';
+    top.dataset.testid = 'back-to-top';
+    top.setAttribute('aria-label', 'Back to top');
+    top.textContent = '↑';
+    top.hidden = true;
+    document.body.appendChild(top);
+    top.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    window.addEventListener('scroll', () => { top.hidden = window.scrollY < 700; }, { passive: true });
+  }
+
+  function renderShell() {
+    const page = document.body.dataset.page;
+    const session = Auth.session();
+    const headerSlot = $('#app-header');
+    const footerSlot = $('#app-footer');
+    if (footerSlot) footerSlot.outerHTML = footerHtml();
+    if (!headerSlot) return;
+    headerSlot.outerHTML = headerHtml(page, session);
+    document.body.insertAdjacentHTML('beforeend', drawerHtml() + cookieHtml());
+    initHeader();
+    initDrawer();
+    initCookies();
+    updateBadges(false);
+    document.addEventListener('cart:change', () => updateBadges(true));
+    document.addEventListener('wishlist:change', () => updateBadges(false));
+
+    // Stop the browser from navigating to a file dropped outside an upload zone.
+    ['dragover', 'drop'].forEach((type) => window.addEventListener(type, (e) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) e.preventDefault();
+    }));
+
+    // Cross-tab sync: cart/wishlist badges and sign-out.
+    window.addEventListener('storage', (e) => {
+      if (e.key === KEYS.session && !Auth.session()) { location.replace('login.html?loggedOut=1'); return; }
+      if (e.key === KEYS.cart || e.key === null) { updateBadges(false); emit('cart:change'); }
+      if (e.key === KEYS.wishlist) { updateBadges(false); emit('wishlist:change'); }
+      if (e.key === KEYS.orders) emit('orders:change');
+    });
+  }
+
+  /** <shop-newsletter>: footer signup in an open shadow root. */
   if (window.customElements && !customElements.get('shop-newsletter')) {
     customElements.define('shop-newsletter', class extends HTMLElement {
       connectedCallback() {
@@ -2359,154 +1667,65 @@
         const root = this.attachShadow({ mode: 'open' });
         root.innerHTML =
           '<style>' +
-          ':host{display:block;width:100%}' +
-          '.box{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px dashed var(--primary,#4f46e5);border-radius:8px;background:var(--surface,#fff)}' +
-          'label{font-size:12px;font-weight:600}' +
-          'input{padding:7px 9px;border:1px solid var(--border,#ccc);border-radius:6px;font:inherit;background:var(--surface,#fff);color:var(--text,#111)}' +
-          'button{padding:7px 10px;border:0;border-radius:6px;background:var(--primary,#4f46e5);color:#fff;font:inherit;font-weight:600;cursor:pointer}' +
-          'p{margin:0;font-size:13px;min-height:18px}.ok{color:var(--success,green)}.err{color:var(--danger,red)}' +
+          ':host{display:block;margin-top:1rem}' +
+          'form{display:flex;gap:6px;flex-wrap:wrap}' +
+          'label{width:100%;font-size:13px;font-weight:600;color:var(--text,#111)}' +
+          'input{flex:1;min-width:160px;padding:10px 14px;border:1px solid var(--border-strong,#ccc);border-radius:999px;font:inherit;background:var(--surface,#fff);color:var(--text,#111)}' +
+          'button{padding:10px 18px;border:0;border-radius:999px;background:var(--primary,#111);color:var(--primary-fg,#fff);font:inherit;font-weight:600;cursor:pointer}' +
+          'p{margin:6px 0 0;font-size:13px;min-height:18px;width:100%}.ok{color:var(--success,green)}.err{color:var(--danger,red)}' +
           '</style>' +
-          '<div class="box" part="box">' +
-          '<label for="sd-email">Newsletter email (inside shadow DOM)</label>' +
+          '<form id="sd-form" novalidate part="form">' +
+          '<label for="sd-email">Get 20% off your first order</label>' +
           '<input id="sd-email" type="email" placeholder="you@example.com" data-testid="shadow-email-input" aria-label="Newsletter email">' +
-          '<button type="button" id="sd-submit" data-testid="shadow-submit-btn">Join</button>' +
+          '<button type="submit" id="sd-submit" data-testid="shadow-submit-btn">Subscribe</button>' +
           '<p id="sd-msg" role="status" data-testid="shadow-message"></p>' +
-          '</div>';
+          '</form>';
         const input = root.getElementById('sd-email');
         const msg = root.getElementById('sd-msg');
-        root.getElementById('sd-submit').addEventListener('click', () => {
+        root.getElementById('sd-form').addEventListener('submit', (e) => {
+          e.preventDefault();
           const ok = EMAIL_RE.test(input.value.trim());
           msg.className = ok ? 'ok' : 'err';
-          msg.textContent = ok ? 'Subscribed ' + input.value.trim() + ' ✓' : 'Please enter a valid email.';
+          msg.textContent = ok ? 'Subscribed ' + input.value.trim() + ' ✓ Use code WELCOME20.' : 'Please enter a valid email.';
         });
       }
     });
   }
 
   // ==========================================================================
-  // Router
+  // Public namespace + boot
   // ==========================================================================
 
-  // ==========================================================================
-  // Page: Login
-  // ==========================================================================
-
-  function initLogin() {
-    const redirect = safeRedirect(param('redirect'));
-    if (Auth.session()) { location.replace(redirect); return; }
-
-    const form = $('#login-form');
-    const username = $('#username');
-    const password = $('#password');
-    const submit = $('#login-submit');
-    const errorBox = $('#login-error');
-    const info = $('#login-info');
-
-    const remembered = store.get(REMEMBER_KEY, '');
-    if (remembered) {
-      username.value = remembered;
-      $('#remember-me').checked = true;
-    }
-
-    if (param('loggedOut')) {
-      info.textContent = 'You have been logged out.';
-      info.hidden = false;
-    } else if (param('redirect')) {
-      info.textContent = 'Please sign in to continue.';
-      info.hidden = false;
-    }
-
-    function showError(msg) {
-      $('#login-error-text').textContent = msg;
-      errorBox.hidden = false;
-    }
-    $('#login-error-close').addEventListener('click', () => {
-      errorBox.hidden = true;
-      [username, password].forEach((el) => el.removeAttribute('aria-invalid'));
-    });
-
-    $('#toggle-password').addEventListener('click', (e) => {
-      const show = password.type === 'password';
-      password.type = show ? 'text' : 'password';
-      e.currentTarget.textContent = show ? 'Hide' : 'Show';
-      e.currentTarget.setAttribute('aria-pressed', String(show));
-      e.currentTarget.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
-    });
-
-    $('#forgot-password').addEventListener('click', (e) => {
-      e.preventDefault();
-      info.textContent = 'This is a demo: every account uses the password ShopLab@123.';
-      info.hidden = false;
-    });
-
-    [username, password].forEach((el) => el.addEventListener('input', () => {
-      if (el.getAttribute('aria-invalid') === 'true' && el.value) {
-        el.setAttribute('aria-invalid', 'false');
-        $('#' + el.id + '-error').textContent = '';
-      }
-    }));
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorBox.hidden = true;
-      const user = username.value.trim();
-      const fields = [[username, user ? '' : 'Username is required.'], [password, password.value ? '' : 'Password is required.']];
-      fields.forEach(([el, msg]) => {
-        $('#' + el.id + '-error').textContent = msg;
-        el.setAttribute('aria-invalid', String(Boolean(msg)));
-      });
-      const firstInvalid = fields.find(([, msg]) => msg);
-      if (firstInvalid) { firstInvalid[0].focus(); return; }
-
-      setBusy(submit, true, 'Signing in…');
-      username.disabled = true;
-      password.disabled = true;
-      await wait((USERS[user] && USERS[user].delay) || 800);
-      username.disabled = false;
-      password.disabled = false;
-      setBusy(submit, false);
-
-      const error = Auth.check(user, password.value);
-      if (error) {
-        showError(error);
-        [username, password].forEach((el) => el.setAttribute('aria-invalid', 'true'));
-        password.value = '';
-        password.focus();
-        return;
-      }
-      Auth.start(user, $('#remember-me').checked);
-      submit.textContent = '✓ Signed in';
-      location.href = redirect;
-    });
-
-    (remembered ? password : username).focus();
-  }
-
-  const PAGES = {
-    login: initLogin,
-    catalog: initCatalog,
-    'product-detail': initProductDetail,
-    checkout: initCheckout,
-    playground: initPlayground,
-  };
-
-  function boot() {
-    initShell();
-    const init = PAGES[document.body.dataset.page];
-    if (init) init();
-    document.body.dataset.ready = 'true'; // tests can wait for body[data-ready="true"]
-  }
-
-  // Small public API for test setup / debugging from the console.
-  window.ShopLab = {
-    version: '1.0.0',
+  Object.assign(SL, {
+    version: '2.0.0',
+    // data
+    CATEGORY_LABELS, CATEGORY_EMOJI, PRODUCTS, COUNTRIES, PROMOS, SHIPPING_RATES, SHIPPING_LABELS, FREE_SHIPPING_THRESHOLD,
+    TAX_RATE, PERSONALIZATION_FEE, CARRIERS, ORDER_STATUS, KEYS, DEMO_PASSWORD,
+    // utils
+    $, $$, round2, money, clamp, wait, param, esc, stars, today, fmtDate, fmtDateTime, plural, EMAIL_RE, store, emit,
+    // state
+    Products, getProduct, productImage, reviewsFor, Auth, safeRedirect, Cart, lineMeta, Wishlist, Orders, Profile, Recent,
+    carrierName, resetDemoState,
+    // ui
+    toast, setBusy, statusBadge, downloadFile, buildPdf, invoiceCsv, receiptPdf, downloadInvoice, downloadReceipt,
+    formatCardNumber, formatExpiry, formatPhone, cardBrand, luhn, expiryError,
+    makeSortable, makeDropZone, createCombobox, createUploader, createDataTable, attachContextMenu, initTabs,
+    productCardHtml, bindCardWishlist, Drawer,
+    // test helpers
     products: PRODUCTS,
     cart: Cart,
     reset: resetDemoState,
-    login(user = 'standard_user', remember = false) { return Auth.start(user, remember); },
+    login(user = 'standard_user') { return Auth.start(user, false); },
     logout() { Auth.logout(); },
-    seedCart(items) { Cart.save((items || [{ id: 1, qty: 1 }, { id: 4, qty: 2 }]).map((i) => ({ id: i.id, qty: i.qty }))); },
-  };
+    seedCart(items) { Cart.save((items || [{ id: 1, qty: 1 }, { id: 4, qty: 2 }]).map((i) => Object.assign({ key: i.id + '||' }, i))); },
+  });
+
+  function boot() {
+    renderShell();
+    const init = SL.pages[document.body.dataset.page];
+    if (init) init();
+    document.body.dataset.ready = 'true'; // tests can wait for body[data-ready="true"]
+  }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

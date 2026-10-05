@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — Order details</title>
+  <script src="auth-guard.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="order">
+  <a href="#main" class="skip-link" data-testid="skip-link">Skip to content</a>
+  <div id="app-header"></div>
+
+  <main id="main" class="container">
+    <section id="order-not-found" class="empty-state" data-testid="order-not-found" hidden style="margin-top:2rem">
+      <span class="emoji" aria-hidden="true">📭</span>
+      <h1>Order not found</h1>
+      <p>We couldn’t find that order on your account.</p>
+      <a href="account.html#orders" class="btn btn-primary" data-testid="order-back-to-orders">Back to my orders</a>
+    </section>
+
+    <div id="order-content" data-testid="order-content" hidden>
+      <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li><a href="account.html#orders" data-testid="order-breadcrumb-orders">My orders</a></li>
+          <li aria-current="page" id="order-breadcrumb-id"></li>
+        </ol>
+      </nav>
+
+      <div class="order-head">
+        <div>
+          <p class="eyebrow" style="margin:0">Order</p>
+          <h1 class="mono" id="order-number" data-testid="order-number"></h1>
+          <p class="muted" style="margin:0">Placed <span id="order-date" data-testid="order-date"></span> · <span id="order-status" data-testid="order-status"></span></p>
+        </div>
+        <div class="row">
+          <button type="button" class="btn" id="order-invoice" data-testid="order-download-invoice">⬇ Invoice (CSV)</button>
+          <button type="button" class="btn" id="order-receipt" data-testid="order-download-receipt">⬇ Receipt (PDF)</button>
+          <a class="btn btn-outline" id="order-return" data-testid="order-request-return" hidden>↩︎ Return items</a>
+          <button type="button" class="btn btn-danger" id="order-cancel" data-testid="order-cancel-btn" hidden>Cancel order</button>
+          <button type="button" class="btn btn-ghost" id="order-help" data-testid="order-help-btn">❓ Help</button>
+        </div>
+      </div>
+
+      <div class="alert" id="order-banner" data-testid="order-status-banner" role="status" hidden></div>
+
+      <ol class="timeline" id="order-timeline" data-testid="order-timeline" aria-label="Order progress"></ol>
+
+      <div class="order-layout">
+        <div class="stack">
+          <section class="panel" aria-labelledby="tracking-title">
+            <div class="panel-title"><h2 id="tracking-title">Live tracking</h2></div>
+            <div class="iframe-shell">
+              <iframe id="tracking-frame" title="Carrier tracking widget" data-testid="tracking-iframe" height="470"></iframe>
+            </div>
+            <p class="small muted" style="margin-top:.5rem">Tracking is provided by the carrier inside an embedded frame.</p>
+          </section>
+
+          <section class="panel" aria-labelledby="items-title">
+            <div class="panel-title"><h2 id="items-title">Items</h2></div>
+            <ul class="order-items" id="order-items" data-testid="order-items"></ul>
+          </section>
+        </div>
+
+        <aside class="stack">
+          <section class="panel summary-panel" aria-labelledby="order-summary-title">
+            <h2 id="order-summary-title">Summary</h2>
+            <dl class="totals" id="order-totals" data-testid="order-totals"></dl>
+          </section>
+          <section class="panel" aria-labelledby="ship-title">
+            <h2 id="ship-title">Delivery</h2>
+            <p id="order-address" data-testid="order-address" style="margin:0"></p>
+            <p class="small muted" id="order-shipping-method" data-testid="order-shipping-method"></p>
+          </section>
+          <section class="panel" aria-labelledby="pay-title">
+            <h2 id="pay-title">Payment</h2>
+            <p id="order-payment" data-testid="order-payment" style="margin:0"></p>
+          </section>
+          <section class="panel" id="order-extras" data-testid="order-extras" hidden>
+            <h2>Notes</h2>
+            <p id="order-gift" data-testid="order-gift-message"></p>
+            <p class="muted" id="order-notes" data-testid="order-notes"></p>
+          </section>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <div id="app-footer"></div>
+  <script src="app.js"></script>
+  <script src="pages/order.js"></script>
+</body>
+</html>

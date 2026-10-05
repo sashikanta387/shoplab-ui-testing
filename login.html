@@ -4,70 +4,146 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ShopLab — Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body data-page="login" class="auth-page">
-  <main id="main" class="auth-shell">
-    <a href="login.html" class="brand auth-brand" data-testid="login-brand" aria-label="ShopLab">
-      <span class="brand-mark" aria-hidden="true">S</span>
-      <span>ShopLab <small>UI test store</small></span>
-    </a>
-
-    <section class="panel auth-card" aria-labelledby="login-title" data-testid="login-card">
-      <h1 id="login-title">Sign in</h1>
-      <p class="muted">Use one of the demo accounts below to enter the store.</p>
-
-      <div id="login-info" class="alert alert-info" data-testid="login-info-banner" role="status" hidden></div>
-      <div id="login-error" class="alert alert-error" data-testid="login-error-banner" role="alert" tabindex="-1" hidden>
-        <span id="login-error-text" data-testid="login-error-text"></span>
-        <button type="button" class="alert-close" id="login-error-close" data-testid="login-error-close" aria-label="Dismiss error">×</button>
+  <main id="main" class="auth-split">
+    <aside class="auth-aside" aria-hidden="true">
+      <div class="auth-aside-inner">
+        <span class="brand auth-brand-light"><span class="brand-mark">S</span><span>ShopLab</span></span>
+        <h2>Shop smarter.<br>Test faster.</h2>
+        <p>Thirteen products, real checkout, order tracking, returns and an admin console — every journey your automation suite needs.</p>
+        <div class="auth-tiles"><span>🎧</span><span>👟</span><span>⌚</span><span>👓</span><span>🌿</span><span>☕</span></div>
       </div>
+    </aside>
 
-      <form id="login-form" name="login-form" data-testid="login-form" novalidate aria-label="Sign in form">
-        <div class="field">
-          <label for="username" class="required">Username</label>
-          <input type="text" class="input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false"
-                 placeholder="standard_user" data-testid="login-username-input" aria-label="Username" aria-describedby="username-error" required>
-          <p class="field-error" id="username-error" data-testid="login-username-error"></p>
+    <div class="auth-shell">
+      <a href="login.html" class="brand auth-brand" data-testid="login-brand" aria-label="ShopLab">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>ShopLab</span>
+      </a>
+
+      <section class="auth-card" aria-labelledby="login-title" data-testid="login-card">
+        <div class="segmented" role="tablist" aria-label="Sign in or create an account" data-testid="auth-tabs">
+          <button type="button" role="tab" id="tab-signin" data-tab="signin" aria-controls="panel-signin" data-testid="auth-tab-signin">Sign in</button>
+          <button type="button" role="tab" id="tab-register" data-tab="register" aria-controls="panel-register" data-testid="auth-tab-register">Create account</button>
         </div>
 
-        <div class="field">
-          <label for="password" class="required">Password</label>
-          <div class="input-group">
-            <input type="password" class="input" id="password" name="password" autocomplete="current-password"
-                   placeholder="••••••••" data-testid="login-password-input" aria-label="Password" aria-describedby="password-error" required>
-            <button type="button" class="btn" id="toggle-password" data-testid="login-password-toggle" aria-label="Show password" aria-pressed="false" aria-controls="password">Show</button>
+        <div id="login-info" class="alert alert-info" data-testid="login-info-banner" role="status" hidden></div>
+
+        <!-- ============ Sign in ============ -->
+        <div role="tabpanel" id="panel-signin" aria-labelledby="tab-signin" data-testid="auth-panel-signin">
+          <h1 id="login-title">Welcome back</h1>
+          <p class="muted">Sign in to shop, track orders and manage returns.</p>
+
+          <div id="login-error" class="alert alert-error" data-testid="login-error-banner" role="alert" tabindex="-1" hidden>
+            <span id="login-error-text" data-testid="login-error-text"></span>
+            <button type="button" class="alert-close" id="login-error-close" data-testid="login-error-close" aria-label="Dismiss error">×</button>
           </div>
-          <p class="field-error" id="password-error" data-testid="login-password-error"></p>
+
+          <form id="login-form" name="login-form" data-testid="login-form" novalidate aria-label="Sign in form">
+            <div class="field">
+              <label for="username" class="required">Username</label>
+              <input type="text" class="input" id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false"
+                     placeholder="standard_user" data-testid="login-username-input" aria-describedby="username-error" required>
+              <p class="field-error" id="username-error" data-testid="login-username-error"></p>
+            </div>
+
+            <div class="field">
+              <label for="password" class="required">Password</label>
+              <div class="input-group">
+                <input type="password" class="input" id="password" name="password" autocomplete="current-password"
+                       placeholder="••••••••" data-testid="login-password-input" aria-describedby="password-error" required>
+                <button type="button" class="btn" id="toggle-password" data-testid="login-password-toggle" aria-label="Show password" aria-pressed="false" aria-controls="password">Show</button>
+              </div>
+              <p class="field-error" id="password-error" data-testid="login-password-error"></p>
+            </div>
+
+            <div class="row" style="justify-content:space-between">
+              <label class="check" for="remember-me">
+                <input type="checkbox" id="remember-me" name="rememberMe" data-testid="login-remember-checkbox">
+                Remember me
+              </label>
+              <a href="#" id="forgot-password" data-testid="login-forgot-password-link">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="login-submit" data-testid="login-submit-btn">Sign in</button>
+          </form>
+
+          <details class="demo-creds" data-testid="login-demo-credentials" open>
+            <summary>Demo accounts · password <code data-testid="login-demo-password">ShopLab@123</code></summary>
+            <div class="demo-users">
+              <button type="button" class="demo-user" data-fill="standard_user" data-testid="login-demo-user-standard"><code>standard_user</code><span>Customer</span></button>
+              <button type="button" class="demo-user" data-fill="admin_user" data-testid="login-demo-user-admin"><code>admin_user</code><span>Admin console</span></button>
+              <button type="button" class="demo-user" data-fill="locked_user" data-testid="login-demo-user-locked"><code>locked_user</code><span>Locked out</span></button>
+              <button type="button" class="demo-user" data-fill="slow_user" data-testid="login-demo-user-slow"><code>slow_user</code><span>4 s delay</span></button>
+            </div>
+          </details>
         </div>
 
-        <div class="row" style="justify-content:space-between">
-          <label class="check" for="remember-me">
-            <input type="checkbox" id="remember-me" name="rememberMe" data-testid="login-remember-checkbox" aria-label="Remember me">
-            Remember me
-          </label>
-          <a href="#" id="forgot-password" data-testid="login-forgot-password-link">Forgot password?</a>
+        <!-- ============ Create account ============ -->
+        <div role="tabpanel" id="panel-register" aria-labelledby="tab-register" data-testid="auth-panel-register" hidden>
+          <h1>Create your account</h1>
+          <p class="muted">New customers get <strong>20% off</strong> with code WELCOME20.</p>
+
+          <div id="register-error" class="alert alert-error" data-testid="register-error-banner" role="alert" hidden></div>
+
+          <form id="register-form" name="register-form" data-testid="register-form" novalidate aria-label="Create account form">
+            <div class="form-grid">
+              <div class="field span-2">
+                <label for="reg-name" class="required">Full name</label>
+                <input type="text" class="input" id="reg-name" name="name" autocomplete="name" data-testid="register-name-input" aria-describedby="reg-name-error">
+                <p class="field-error" id="reg-name-error" data-testid="register-name-error"></p>
+              </div>
+              <div class="field">
+                <label for="reg-email" class="required">Email</label>
+                <input type="email" class="input" id="reg-email" name="email" autocomplete="email" placeholder="you@example.com" data-testid="register-email-input" aria-describedby="reg-email-error">
+                <p class="field-error" id="reg-email-error" data-testid="register-email-error"></p>
+              </div>
+              <div class="field">
+                <label for="reg-username" class="required">Username</label>
+                <input type="text" class="input" id="reg-username" name="username" autocomplete="username" autocapitalize="none" placeholder="3–20 letters, numbers or _" data-testid="register-username-input" aria-describedby="reg-username-error">
+                <p class="field-error" id="reg-username-error" data-testid="register-username-error"></p>
+              </div>
+              <div class="field">
+                <label for="reg-password" class="required">Password</label>
+                <input type="password" class="input" id="reg-password" name="password" autocomplete="new-password" data-testid="register-password-input" aria-describedby="reg-password-error reg-strength-label">
+                <div class="strength" data-testid="register-password-strength" data-strength="0">
+                  <div class="strength-bar"><span></span><span></span><span></span><span></span></div>
+                  <span class="small muted" id="reg-strength-label" data-testid="register-password-strength-label">Use 8+ characters with a number and a symbol</span>
+                </div>
+                <p class="field-error" id="reg-password-error" data-testid="register-password-error"></p>
+              </div>
+              <div class="field">
+                <label for="reg-confirm" class="required">Confirm password</label>
+                <input type="password" class="input" id="reg-confirm" name="confirm" autocomplete="new-password" data-testid="register-confirm-input" aria-describedby="reg-confirm-error">
+                <p class="field-error" id="reg-confirm-error" data-testid="register-confirm-error"></p>
+              </div>
+              <div class="field span-2">
+                <label for="reg-dob" class="required">Date of birth</label>
+                <input type="date" class="input" id="reg-dob" name="dob" data-testid="register-dob-input" aria-describedby="reg-dob-error reg-dob-hint">
+                <span class="hint" id="reg-dob-hint">You must be 13 or older.</span>
+                <p class="field-error" id="reg-dob-error" data-testid="register-dob-error"></p>
+              </div>
+            </div>
+            <label class="check" for="reg-terms" style="margin-top:1rem">
+              <input type="checkbox" id="reg-terms" name="terms" data-testid="register-terms-checkbox" aria-describedby="reg-terms-error">
+              <span>I agree to the <a href="#" data-testid="register-terms-link" id="reg-terms-link">Terms of Service</a></span>
+            </label>
+            <p class="field-error" id="reg-terms-error" data-testid="register-terms-error"></p>
+            <button type="submit" class="btn btn-primary btn-lg btn-block" id="register-submit" data-testid="register-submit-btn" style="margin-top:1rem">Create account</button>
+          </form>
         </div>
+      </section>
 
-        <button type="submit" class="btn btn-primary btn-lg btn-block" id="login-submit" data-testid="login-submit-btn" aria-label="Sign in" style="margin-top:1.25rem">Sign in</button>
-      </form>
-
-      <details class="demo-creds" data-testid="login-demo-credentials" open>
-        <summary>Demo accounts</summary>
-        <table class="summary-table">
-          <tbody>
-            <tr><td><code data-testid="login-demo-user-standard">standard_user</code></td><td>Signs in normally</td></tr>
-            <tr><td><code data-testid="login-demo-user-locked">locked_user</code></td><td>Locked-out error</td></tr>
-            <tr><td><code data-testid="login-demo-user-slow">slow_user</code></td><td>Signs in after a 4 s delay</td></tr>
-          </tbody>
-        </table>
-        <p class="small" style="margin:.5rem 0 0">Password for every account: <code data-testid="login-demo-password">ShopLab@123</code></p>
-      </details>
-    </section>
-
-    <p class="small muted" style="text-align:center">Demo only. Credentials are checked in the browser and nothing is sent anywhere.</p>
+      <p class="small muted" style="text-align:center">Demo only. Credentials are checked in your browser and nothing is sent anywhere.</p>
+    </div>
   </main>
 
   <script src="app.js"></script>
+  <script src="pages/login.js"></script>
 </body>
 </html>

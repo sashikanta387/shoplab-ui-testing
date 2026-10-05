@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLab — Admin console</title>
+  <script src="auth-guard.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="admin">
+  <a href="#main" class="skip-link" data-testid="skip-link">Skip to content</a>
+  <div id="app-header"></div>
+
+  <main id="main" class="container">
+    <section id="admin-denied" class="empty-state" data-testid="admin-access-denied" hidden style="margin-top:2rem">
+      <span class="emoji" aria-hidden="true">🔒</span>
+      <h1>Admins only</h1>
+      <p>You’re signed in as a customer. Log out and sign in as <code>admin_user</code> to manage the store.</p>
+      <a href="index.html" class="btn btn-primary" data-testid="admin-back-to-shop">Back to shop</a>
+    </section>
+
+    <div id="admin-content" data-testid="admin-content" hidden>
+      <div class="admin-head">
+        <div>
+          <p class="eyebrow" style="margin:0">Store management</p>
+          <h1 style="margin:0">Admin console</h1>
+        </div>
+        <div class="segmented" role="tablist" aria-label="Admin sections" data-testid="admin-tabs">
+          <button type="button" role="tab" data-tab="dashboard" id="admin-tab-dashboard" aria-controls="admin-panel-dashboard" data-testid="admin-tab-dashboard">Dashboard</button>
+          <button type="button" role="tab" data-tab="products" id="admin-tab-products" aria-controls="admin-panel-products" data-testid="admin-tab-products">Products</button>
+          <button type="button" role="tab" data-tab="orders" id="admin-tab-orders" aria-controls="admin-panel-orders" data-testid="admin-tab-orders">Orders <span class="pill-count" id="admin-orders-pending" data-testid="admin-orders-pending-count"></span></button>
+          <button type="button" role="tab" data-tab="returns" id="admin-tab-returns" aria-controls="admin-panel-returns" data-testid="admin-tab-returns">Returns <span class="pill-count" id="admin-returns-pending" data-testid="admin-returns-pending-count"></span></button>
+        </div>
+      </div>
+
+      <!-- ============ Dashboard ============ -->
+      <section role="tabpanel" id="admin-panel-dashboard" aria-labelledby="admin-tab-dashboard" data-testid="admin-panel-dashboard">
+        <div class="kpi-grid" id="kpi-grid" data-testid="admin-kpis"></div>
+        <div class="dash-grid">
+          <section class="panel">
+            <div class="panel-title"><h2>Orders by status</h2></div>
+            <div class="bar-chart" id="status-chart" data-testid="admin-status-chart"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-title"><h2>Low stock</h2></div>
+            <ul class="mini-list" id="low-stock" data-testid="admin-low-stock-list"></ul>
+          </section>
+          <section class="panel">
+            <div class="panel-title"><h2>Recent orders</h2></div>
+            <ul class="mini-list" id="recent-orders" data-testid="admin-recent-orders"></ul>
+          </section>
+          <section class="panel">
+            <div class="panel-title"><h2>Demo data</h2></div>
+            <p class="small muted">Create sample orders for <code>standard_user</code> in every status — handy for testing tables, filters and pagination.</p>
+            <div class="row">
+              <button type="button" class="btn btn-primary btn-sm" id="admin-seed" data-testid="admin-seed-orders-btn">Generate 12 sample orders</button>
+              <button type="button" class="btn btn-sm" id="admin-clear-orders" data-testid="admin-clear-orders-btn">Delete all orders</button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ============ Products ============ -->
+      <section class="panel" role="tabpanel" id="admin-panel-products" aria-labelledby="admin-tab-products" data-testid="admin-panel-products" hidden>
+        <div class="panel-title"><h2>Products</h2><span class="muted small">Right-click a row for more actions. Changes appear in the store immediately.</span></div>
+        <div id="admin-products"></div>
+      </section>
+
+      <!-- ============ Orders ============ -->
+      <section class="panel" role="tabpanel" id="admin-panel-orders" aria-labelledby="admin-tab-orders" data-testid="admin-panel-orders" hidden>
+        <div class="panel-title"><h2>Orders</h2><span class="muted small">Fulfil processing orders, then mark them delivered.</span></div>
+        <div id="admin-orders"></div>
+      </section>
+
+      <!-- ============ Returns ============ -->
+      <section class="panel" role="tabpanel" id="admin-panel-returns" aria-labelledby="admin-tab-returns" data-testid="admin-panel-returns" hidden>
+        <div class="panel-title"><h2>Return requests</h2></div>
+        <div id="admin-returns"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Fulfil order -->
+  <dialog class="modal" id="fulfil-modal" data-testid="fulfil-modal" aria-labelledby="fulfil-title">
+    <form id="fulfil-form" novalidate>
+      <div class="modal-header"><h2 id="fulfil-title">Fulfil order <span class="mono" id="fulfil-order-id" data-testid="fulfil-order-id"></span></h2>
+        <button type="button" class="modal-close" id="fulfil-close" data-testid="fulfil-close" aria-label="Close">×</button></div>
+      <div class="modal-body stack">
+        <div id="fulfil-items" class="small muted" data-testid="fulfil-items"></div>
+        <div class="field">
+          <label for="fulfil-carrier" class="required">Carrier</label>
+          <select class="select" id="fulfil-carrier" data-testid="fulfil-carrier-select" aria-describedby="fulfil-carrier-error"></select>
+          <p class="field-error" id="fulfil-carrier-error" data-testid="fulfil-carrier-error"></p>
+        </div>
+        <div class="field">
+          <label for="fulfil-tracking" class="required">Tracking number</label>
+          <div class="input-group">
+            <input type="text" class="input mono" id="fulfil-tracking" data-testid="fulfil-tracking-input" aria-describedby="fulfil-tracking-error">
+            <button type="button" class="btn" id="fulfil-generate" data-testid="fulfil-generate-tracking">Generate</button>
+          </div>
+          <p class="field-error" id="fulfil-tracking-error" data-testid="fulfil-tracking-error"></p>
+        </div>
+        <div class="field">
+          <label for="fulfil-date" class="required">Ship date</label>
+          <input type="date" class="input" id="fulfil-date" data-testid="fulfil-date-input" aria-describedby="fulfil-date-error">
+          <p class="field-error" id="fulfil-date-error" data-testid="fulfil-date-error"></p>
+        </div>
+        <label class="check"><input type="checkbox" id="fulfil-notify" checked data-testid="fulfil-notify-checkbox"> Email the customer a shipping confirmation</label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="fulfil-cancel" data-testid="fulfil-cancel-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="fulfil-submit" data-testid="fulfil-submit-btn">Mark as shipped</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Return review -->
+  <dialog class="modal" id="return-review-modal" data-testid="return-review-modal" aria-labelledby="return-review-title">
+    <div class="modal-header"><h2 id="return-review-title">Return <span class="mono" id="return-review-id"></span></h2>
+      <button type="button" class="modal-close" data-testid="return-review-close" id="return-review-close" aria-label="Close">×</button></div>
+    <div class="modal-body" id="return-review-body" data-testid="return-review-body"></div>
+  </dialog>
+
+  <div id="app-footer"></div>
+  <script src="app.js"></script>
+  <script src="pages/admin.js"></script>
+</body>
+</html>
